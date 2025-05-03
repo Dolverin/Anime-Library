@@ -48,88 +48,38 @@ def get_page_content(url: str) -> Optional[BeautifulSoup]:
         with sync_playwright() as p:
             # Firefox statt Chromium verwenden, da einige Webseiten Chromium-automatisierung stärker erkennen
             browser = p.firefox.launch(headless=True)
-            
-            # Browser-Kontext mit zusätzlichen Optionen erstellen
-            context = browser.new_context(
-                user_agent=user_agent,
-                viewport={'width': 1366, 'height': 768},
-                locale='de-DE',
-                timezone_id='Europe/Berlin',
-                # Geolocation auf deutschen Standort setzen
-                geolocation={'latitude': 52.5200, 'longitude': 13.4050, 'accuracy': 100},
-                # JavaScript-Ausführung erlauben
-                java_script_enabled=True,
-                # Verhindert das Erkennen der Automation
-                bypass_csp=True,
-                # Cookies akzeptieren
-                accept_downloads=True,
-            )
-            
-            # Neue Seite erstellen
+            context = browser.new_context(user_agent=user_agent)
             page = context.new_page()
             
-            # Cookie-Banner akzeptieren, falls vorhanden - häufig wird dadurch der Zugriff ermöglicht
-            page.goto(BASE_URL, wait_until='domcontentloaded', timeout=30000)
+            # Cookie-Banner akzeptieren
+            try:
+                page.goto("https://anime-loads.org")
+                page.wait_for_timeout(random.randint(2000, 4000))
+                cookie_accept_button = page.query_selector("button.btn-primary")
+                if cookie_accept_button:
+                    cookie_accept_button.click()
+                    logger.info("Clicked on cookie consent using selector: button.btn-primary")
+                    page.wait_for_timeout(random.randint(1000, 2000))
+            except PlaywrightError as e:
+                logger.warning(f"Error handling cookie banner: {e}")
             
-            # Kurze Pause, damit die Seite vollständig geladen wird
-            page.wait_for_timeout(2000 + random.randint(500, 2000))
-            
-            # Versuche Cookie-Banner zu akzeptieren (häufige Selektoren)
-            for selector in [
-                'button[aria-label="Alle akzeptieren"]', 
-                'button:has-text("Akzeptieren")', 
-                'button:has-text("Zustimmen")',
-                'button.btn-primary',
-                'a:has-text("Akzeptieren")'
-            ]:
-                try:
-                    if page.locator(selector).count() > 0:
-                        page.locator(selector).first.click()
-                        logger.info(f"Clicked on cookie consent using selector: {selector}")
-                        # Nach dem Klick kurz warten
-                        page.wait_for_timeout(1000 + random.randint(500, 1500))
-                        break
-                except Exception as e:
-                    logger.debug(f"Could not click selector {selector}: {e}")
-            
-            # Menschliches Scrollverhalten simulieren
-            for _ in range(3):
-                # Random Scroll nach unten
-                page.mouse.wheel(0, random.randint(300, 700))
-                page.wait_for_timeout(random.randint(500, 1500))
-            
-            # Jetzt zur eigentlichen URL navigieren
+            # Navigiere zur gewünschten URL
             logger.info(f"Navigating to: {url}")
-            response = page.goto(url, wait_until='domcontentloaded', timeout=30000)
+            response = page.goto(url, wait_until="domcontentloaded", timeout=30000)
             
-            # Zufällige Wartezeit nach dem Laden
-            page.wait_for_timeout(2000 + random.randint(500, 2000))
-            
-            # Menschliches Scrollverhalten simulieren
-            for _ in range(3):
-                # Random Scroll nach unten
-                page.mouse.wheel(0, random.randint(300, 700))
-                page.wait_for_timeout(random.randint(500, 1500))
-            
-            if response and response.ok:
-                # Mit wait_for_load_state sicherstellen, dass die Seite vollständig geladen ist
-                page.wait_for_load_state('networkidle')
-                content = page.content()
-                browser.close()
-                logger.info(f"Successfully fetched content from {url}")
-                return BeautifulSoup(content, 'html.parser')
-            else:
-                status = response.status if response else 'No Response'
-                logger.error(f"Failed to fetch {url}. Status: {status}")
-                
-                # Bei 403 oder 429 Fehler, versuche ein Screenshot zu machen, um das Problem zu diagnostizieren
-                if response and (response.status == 403 or response.status == 429):
-                    logger.info("Capturing screenshot of blocked page for debugging")
-                    page.screenshot(path="blocked_page.png")
-                
+            if response.status != 200:
+                logger.error(f"Failed to fetch {url}. Status: {response.status}")
                 browser.close()
                 return None
-                
+            
+            # Warte auf das Laden der Seite und simuliere menschliches Verhalten
+            page.wait_for_timeout(random.randint(3000, 5000))
+            page.mouse.wheel(0, random.randint(300, 700))
+            page.wait_for_timeout(random.randint(1000, 3000))
+            
+            html_content = page.content()
+            browser.close()
+            return BeautifulSoup(html_content, 'html.parser')
     except PlaywrightError as e:
         logger.error(f"Playwright error fetching {url}: {e}")
         # Ensure browser is closed in case of error before page.goto completes
@@ -161,6 +111,130 @@ def download_image(url: str) -> Optional[bytes]:
     Returns:
         Binärdaten des Bildes oder None bei Fehler
     """
+    try:
+        # Method 1: Use FlareSolverr proxy
+        flaresolverr_url = "http://localhost:8191/v1"
+        payload = {
+            "cmd": "request.get",
+            "url": url,
+            "maxTimeout": 60000
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(flaresolverr_url, json=payload, headers=headers, timeout=60)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "ok":
+                image_url = data["solution"]["url"]
+                image_response = requests.get(image_url, timeout=10)
+                if image_response.status_code == 200:
+                    return image_response.content
+        logger.warning(f"FlareSolverr failed for {url}")
+    except Exception as e:
+        logger.error(f"Error using FlareSolverr for {url}: {str(e)}")
+
+    # Spezialmethode für anime-loads.org Bilder
+    if "anime-loads.org" in url and "/files/image/" in url:
+        try:
+            logger.info(f"Versuche spezielle Methode für anime-loads.org Bilder: {url}")
+            # Extrahiere den Bildnamen aus der URL
+            image_name = url.split('/')[-1]
+            referer_url = "https://www.anime-loads.org/"
+            
+            # 1. Methode: Versuche mit speziellen Headern
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Accept-Language': 'de,en-US;q=0.9,en;q=0.8',
+                'Referer': referer_url,
+                'Origin': 'https://www.anime-loads.org',
+                'Connection': 'keep-alive',
+                'Sec-Fetch-Dest': 'image',
+                'Sec-Fetch-Mode': 'no-cors',
+                'Sec-Fetch-Site': 'same-origin',
+                'Cache-Control': 'max-age=0',
+            }
+            
+            session = requests.Session()
+            # Besuche zuerst die Hauptseite, um Cookies zu setzen
+            main_page = session.get(referer_url, headers=headers, timeout=10)
+            if main_page.status_code == 200:
+                # Dann versuche das Bild zu holen
+                img_response = session.get(url, headers=headers, timeout=10)
+                if img_response.status_code == 200:
+                    logger.info(f"Spezielle Methode für anime-loads.org erfolgreich: {len(img_response.content)} Bytes")
+                    return img_response.content
+                    
+            # Versuch mit korrigierter URL (falls Bindestrich falsch ist)
+            corrected_url = url.replace("/w200-", "/w200/")
+            if corrected_url != url:
+                logger.info(f"Versuche mit korrigierter URL: {corrected_url}")
+                img_response = session.get(corrected_url, headers=headers, timeout=10)
+                if img_response.status_code == 200:
+                    logger.info(f"Spezielle Methode mit korrigierter URL erfolgreich: {len(img_response.content)} Bytes")
+                    return img_response.content
+        except Exception as e:
+            logger.error(f"Fehler bei spezieller anime-loads.org Methode: {str(e)}")
+            
+    # Versuch, das Bild aus der Anime-Detailseite zu extrahieren
+    if "anime-loads.org" in url:
+        try:
+            # Extrahiere die Anime-ID oder den Namen aus der URL
+            parts = url.split('/')
+            if len(parts) >= 5:
+                # Versuche die Anime-Detailseite aus dem Bildpfad abzuleiten
+                anime_id = None
+                for part in parts:
+                    if part.startswith("ore-dake") or "level-up" in part:
+                        anime_id = part
+                        break
+                
+                if anime_id:
+                    # Konstruiere die URL zur Anime-Detailseite
+                    anime_url = f"https://www.anime-loads.org/media/{anime_id}"
+                    logger.info(f"Versuche Anime-Detailseite zu laden: {anime_url}")
+                    
+                    # Verwende Playwright, um die Seite zu laden und einen Screenshot zu machen
+                    with sync_playwright() as p:
+                        browser = p.firefox.launch(headless=True)
+                        context = browser.new_context(
+                            user_agent=get_random_user_agent(),
+                            viewport={'width': 1366, 'height': 768}
+                        )
+                        page = context.new_page()
+                        
+                        try:
+                            # Cookies akzeptieren
+                            page.goto("https://www.anime-loads.org")
+                            page.wait_for_timeout(random.randint(2000, 4000))
+                            cookie_accept_button = page.query_selector("button.btn-primary")
+                            if cookie_accept_button:
+                                cookie_accept_button.click()
+                                logger.info("Clicked on cookie consent using selector: button.btn-primary")
+                                page.wait_for_timeout(random.randint(1000, 2000))
+                        except Exception as e:
+                            logger.warning(f"Error handling cookie banner: {e}")
+                        
+                        # Navigiere zur Anime-Seite
+                        response = page.goto(anime_url, wait_until="domcontentloaded", timeout=30000)
+                        
+                        if response.status == 200:
+                            # Warte auf das Laden der Seite
+                            page.wait_for_timeout(random.randint(3000, 5000))
+                            
+                            # Finde das Cover-Element
+                            cover_element = page.query_selector(".cover-image img, .anime-cover img, .cover img")
+                            if cover_element:
+                                # Mache einen Screenshot des Cover-Elements
+                                screenshot = cover_element.screenshot()
+                                browser.close()
+                                logger.info(f"Cover-Screenshot erfolgreich: {len(screenshot)} Bytes")
+                                return screenshot
+                        
+                        browser.close()
+        except Exception as e:
+            logger.error(f"Fehler beim Extrahieren des Cover-Bildes aus der Detailseite: {str(e)}")
+
+    # Fallback to previous methods if FlareSolverr fails
     # Zuerst mit normalen HTTP-Anfragen versuchen
     try:
         logger.info(f"Lade Bild herunter (Methode 1 - Requests): {url}")
