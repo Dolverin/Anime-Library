@@ -12,6 +12,7 @@ from app.utils.image import hash_url, download_or_proxy
 import os
 from app import crud
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 # Logger konfigurieren (global)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -23,6 +24,15 @@ logger = logging.getLogger(__name__)
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# CORS-Einstellungen aktivieren, um Frontend-Zugriff zu erlauben
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Frontend-URL (Vite Dev Server)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Include the anime router
 app.include_router(animes.router)
