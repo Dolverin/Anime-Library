@@ -42,8 +42,19 @@ class AnimeBase(BaseModel):
     titel: str
     status: AnimeStatus = AnimeStatus.plan_to_watch
     beschreibung: Optional[str] = None
-    anime_loads_url: Optional[HttpUrl] = None
-    cover_image_url: Optional[HttpUrl] = None
+    anime_loads_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    # Neue Felder
+    original_titel: Optional[str] = None
+    synonyme: Optional[str] = None
+    typ: Optional[str] = None
+    jahr: Optional[int] = None
+    episoden_anzahl: Optional[str] = None
+    laufzeit: Optional[str] = None
+    hauptgenre: Optional[str] = None
+    nebengenres: Optional[str] = None
+    tags: Optional[str] = None
+    anisearch_url: Optional[str] = None
 
 # Schema for creating a new Anime
 class AnimeCreate(AnimeBase):
@@ -54,8 +65,19 @@ class AnimeUpdate(BaseModel):
     titel: Optional[str] = None
     status: Optional[AnimeStatus] = None
     beschreibung: Optional[str] = None
-    anime_loads_url: Optional[HttpUrl] = None
-    cover_image_url: Optional[HttpUrl] = None
+    anime_loads_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    # Neue Felder
+    original_titel: Optional[str] = None
+    synonyme: Optional[str] = None
+    typ: Optional[str] = None
+    jahr: Optional[int] = None
+    episoden_anzahl: Optional[str] = None
+    laufzeit: Optional[str] = None
+    hauptgenre: Optional[str] = None
+    nebengenres: Optional[str] = None
+    tags: Optional[str] = None
+    anisearch_url: Optional[str] = None
 
 # Schema for reading/returning Anime data (includes id and timestamps)
 # Excludes episodes list by default
@@ -73,3 +95,25 @@ class Anime(AnimeSimple):
 
     class Config:
         from_attributes = True
+
+# Schema für Anime-Relationen
+class AnimeRelationBase(BaseModel):
+    source_anime_id: int
+    target_anime_id: int
+    relation_type: str
+
+# Schema for creating a new Anime relation
+class AnimeRelationCreate(AnimeRelationBase):
+    pass
+
+# Schema for reading/returning Anime relation data (includes id)
+class AnimeRelation(AnimeRelationBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+# Schema for reading/returning Anime data including its relations
+class AnimeWithRelations(Anime):
+    source_relations: List[AnimeRelation] = []
+    target_relations: List[AnimeRelation] = []
