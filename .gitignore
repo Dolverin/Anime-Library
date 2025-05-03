@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+/backend/venv/
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node / Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.pnp
+/frontend/.pnp.js
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Other
+.DS_Store
