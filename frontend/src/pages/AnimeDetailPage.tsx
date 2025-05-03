@@ -129,8 +129,14 @@ const AnimeDetailPage = () => {
       </Button>
 
       <Card>
-        <Card.Header>
-          <h2>{anime.titel}</h2>
+        <Card.Header className="d-flex justify-content-between align-items-center">
+          <h2>{anime.titel_de}</h2>
+          <Button 
+            variant="outline-primary"
+            onClick={() => navigate(`/anime/${anime.id}/bearbeiten`)}
+          >
+            <i className="bi bi-pencil-square me-1"></i> Bearbeiten
+          </Button>
         </Card.Header>
         <Card.Body>
           <Row>
@@ -138,7 +144,7 @@ const AnimeDetailPage = () => {
             <Col md={3} className="mb-3">
               <img 
                 src={coverUrl} 
-                alt={`Cover: ${anime.titel}`} 
+                alt={`Cover: ${anime.titel_de}`} 
                 className="img-fluid rounded" 
               />
               

@@ -10,6 +10,7 @@ import SearchPage from './pages/SearchPage'
 import MyAnimes from './pages/MyAnimes'
 import AvailableAnimes from './pages/AvailableAnimes'
 import AddAnimePage from './pages/AddAnimePage'
+import EditAnimePage from './pages/EditAnimePage'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/anime/:id" element={<AnimeDetailPage />} />
+            <Route path="/anime/:id/bearbeiten" element={<EditAnimePage />} />
             <Route path="/suche" element={<SearchPage />} />
             <Route path="/meine-animes" element={<MyAnimes />} />
             <Route path="/verfügbar" element={<AvailableAnimes />} />
