@@ -184,10 +184,29 @@ const AnimeDetailPage = () => {
               <p>{anime.beschreibung || 'Keine Beschreibung verfügbar.'}</p>
               
               {/* Episodenliste */}
-              <h4 className="mt-4">Episoden</h4>
+              <div className="mt-4 d-flex justify-content-between align-items-center">
+                <h4>Episoden</h4>
+                <Button 
+                  variant="outline-success"
+                  size="sm"
+                  onClick={() => navigate(`/anime/${anime.id}/episode/hinzufuegen`)}
+                >
+                  <i className="bi bi-plus-lg"></i> Neue Episode
+                </Button>
+              </div>
               <EpisodeList 
                 animeId={anime.id} 
                 episodes={episodes}
+                onDeleteEpisode={async (episodeId) => {
+                  try {
+                    await episodeService.deleteEpisode(episodeId);
+                    // Episode aus dem lokalen State entfernen
+                    setEpisodes(episodes.filter(ep => ep.id !== episodeId));
+                  } catch (err) {
+                    console.error('Fehler beim Löschen der Episode:', err);
+                    alert('Fehler beim Löschen der Episode.');
+                  }
+                }}
               />
             </Col>
           </Row>

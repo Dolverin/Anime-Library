@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
-import { Anime, Episode, AnimeListResponse, ApiResponse, AnimeCreate, AnimeUpdate } from '../types';
+import { Anime, Episode, AnimeListResponse, ApiResponse, AnimeCreate, AnimeUpdate, EpisodeCreate } from '../types';
 
 // API Basis-URL konfigurieren
 const API_BASE_URL = 'http://192.168.178.40:8000/api';
@@ -95,7 +95,7 @@ export const episodeService = {
   // Alle Episoden eines Animes abrufen
   getEpisodesByAnimeId: async (animeId: number): Promise<ApiResponse<Episode[]>> => {
     try {
-      const response = await api.get<Episode[]>(`/episodes/anime/${animeId}`);
+      const response = await api.get<Episode[]>(`/episodes/${animeId}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -103,9 +103,9 @@ export const episodeService = {
   },
 
   // Eine bestimmte Episode abrufen
-  getEpisode: async (episodeId: number): Promise<ApiResponse<Episode>> => {
+  getEpisode: async (animeId: number, episodeId: number): Promise<ApiResponse<Episode>> => {
     try {
-      const response = await api.get<Episode>(`/episodes/${episodeId}`);
+      const response = await api.get<Episode>(`/episodes/${animeId}/${episodeId}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -116,6 +116,36 @@ export const episodeService = {
   updateEpisodeStatus: async (episodeId: number, status: string): Promise<ApiResponse<Episode>> => {
     try {
       const response = await api.patch<Episode>(`/episodes/${episodeId}`, { status });
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Eine neue Episode erstellen
+  createEpisode: async (animeId: number, episodeData: EpisodeCreate): Promise<ApiResponse<Episode>> => {
+    try {
+      const response = await api.post<Episode>(`/episodes/${animeId}`, episodeData);
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Eine Episode aktualisieren
+  updateEpisode: async (episodeId: number, episodeData: Partial<Episode>): Promise<ApiResponse<Episode>> => {
+    try {
+      const response = await api.put<Episode>(`/episodes/${episodeId}`, episodeData);
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Eine Episode löschen
+  deleteEpisode: async (episodeId: number): Promise<ApiResponse<Episode>> => {
+    try {
+      const response = await api.delete<Episode>(`/episodes/${episodeId}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);

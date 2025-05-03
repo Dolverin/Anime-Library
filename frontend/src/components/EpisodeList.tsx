@@ -1,4 +1,4 @@
-import { Table, Form, Badge, Button } from 'react-bootstrap';
+import { Table, Form, Badge, Button, ButtonGroup } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
 import { Episode, EpisodeStatus, EpisodeAvailabilityStatus } from '../types';
 import { episodeService } from '../services/api';
@@ -23,12 +23,14 @@ interface EpisodeListProps {
   animeId: number;
   episodes?: Episode[];
   onEpisodeStatusChange?: (episodeId: number, newStatus: EpisodeStatus) => void;
+  onDeleteEpisode?: (episodeId: number) => void;
 }
 
 const EpisodeList: React.FC<EpisodeListProps> = ({ 
   animeId, 
   episodes: propEpisodes,
-  onEpisodeStatusChange 
+  onEpisodeStatusChange,
+  onDeleteEpisode
 }) => {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,25 +127,44 @@ const EpisodeList: React.FC<EpisodeListProps> = ({
                 </Badge>
               </td>
               <td>
-                {episode.stream_link && (
+                <ButtonGroup>
+                  {episode.stream_link && (
+                    <Button 
+                      size="sm" 
+                      variant="primary"
+                      onClick={() => openStreamLink(episode.stream_link!)}
+                    >
+                      Stream
+                    </Button>
+                  )}
+                  {episode.local_file_path && (
+                    <Button 
+                      size="sm" 
+                      variant="success"
+                      onClick={() => alert(`Lokale Datei: ${episode.local_file_path}`)}
+                    >
+                      Lokal
+                    </Button>
+                  )}
                   <Button 
                     size="sm" 
-                    variant="primary"
-                    onClick={() => openStreamLink(episode.stream_link!)}
+                    variant="outline-secondary"
+                    onClick={() => window.location.href = `/anime/${animeId}/episode/${episode.id}/bearbeiten`}
                   >
-                    Stream
+                    <i className="bi bi-pencil"></i>
                   </Button>
-                )}
-                {episode.local_file_path && (
                   <Button 
                     size="sm" 
-                    variant="success"
-                    className="ms-2"
-                    onClick={() => alert(`Lokale Datei: ${episode.local_file_path}`)}
+                    variant="outline-danger"
+                    onClick={() => {
+                      if (window.confirm(`Möchtest du Episode ${episode.episoden_nummer} wirklich löschen?`)) {
+                        onDeleteEpisode?.(episode.id);
+                      }
+                    }}
                   >
-                    Lokal
+                    <i className="bi bi-trash"></i>
                   </Button>
-                )}
+                </ButtonGroup>
               </td>
             </tr>
           ))}
