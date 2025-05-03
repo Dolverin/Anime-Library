@@ -63,15 +63,66 @@ def delete_anime(db: Session, anime_id: int) -> Optional[models.Anime]:
         return db_anime
     return None
 
-# --- Episode CRUD (Placeholder - implement later) --- 
+# --- Episode CRUD --- 
+
+def get_episode(db: Session, episode_id: int) -> Optional[models.Episode]:
+    """Get a single episode by its ID."""
+    return db.query(models.Episode).filter(models.Episode.id == episode_id).first()
+
+def get_episode_by_anime_id_and_number(
+    db: Session, anime_id: int, episoden_nummer: int
+) -> Optional[models.Episode]:
+    """Get a specific episode by anime ID and episode number."""
+    return db.query(models.Episode).filter(
+        models.Episode.anime_id == anime_id,
+        models.Episode.episoden_nummer == episoden_nummer
+    ).first()
 
 def get_episodes_for_anime(db: Session, anime_id: int, skip: int = 0, limit: int = 1000) -> List[models.Episode]:
     """Get all episodes for a specific anime."""
     return db.query(models.Episode).filter(models.Episode.anime_id == anime_id).offset(skip).limit(limit).all()
 
-def create_episode(db: Session, episode: schemas.EpisodeCreate) -> models.Episode:
-    """Create a new episode."""
-    # Implementation needed
-    pass
+def create_episode(db: Session, episode: schemas.EpisodeCreate, anime_id: int) -> models.Episode:
+    """Create a new episode in the database."""
+    db_episode = models.Episode(
+        anime_id=anime_id,
+        episoden_nummer=episode.episoden_nummer,
+        titel=episode.titel,
+        status=episode.status,
+        air_date=episode.air_date,
+        anime_loads_episode_url=str(episode.anime_loads_episode_url) if episode.anime_loads_episode_url else None
+    )
+    db.add(db_episode)
+    db.commit()
+    db.refresh(db_episode)
+    return db_episode
 
-# Add get_episode, update_episode, delete_episode functions later
+def update_episode(
+    db: Session, episode_id: int, episode_update: schemas.EpisodeUpdate
+) -> Optional[models.Episode]:
+    """Update an existing episode."""
+    db_episode = get_episode(db, episode_id=episode_id)
+    if not db_episode:
+        return None
+
+    update_data = episode_update.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        # Handle URL conversion if present
+        if key == 'anime_loads_episode_url' and value is not None:
+            setattr(db_episode, key, str(value))
+        else:
+            setattr(db_episode, key, value)
+
+    db.commit()
+    db.refresh(db_episode)
+    return db_episode
+
+def delete_episode(db: Session, episode_id: int) -> Optional[models.Episode]:
+    """Delete an episode from the database."""
+    db_episode = get_episode(db, episode_id=episode_id)
+    if db_episode:
+        db.delete(db_episode)
+        db.commit()
+        return db_episode
+    return None

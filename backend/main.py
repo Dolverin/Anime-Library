@@ -3,7 +3,7 @@ from fastapi import FastAPI
 # Import necessary components from our app
 from backend.app import models
 from backend.app.database import engine, Base
-from backend.app.routers import animes
+from backend.app.routers import animes, episodes
 
 # Create database tables
 # This should ideally be handled by migrations (e.g., Alembic) in production
@@ -14,6 +14,9 @@ app = FastAPI()
 
 # Include the anime router
 app.include_router(animes.router)
+
+# Include the episodes router
+app.include_router(episodes.router)
 
 @app.get("/")
 def read_root():
