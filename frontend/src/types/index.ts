@@ -23,19 +23,72 @@ export enum EpisodeAvailabilityStatus {
   OWNED_AND_AVAILABLE_ONLINE = "owned_and_available_online"
 }
 
-// Anime Interface
+// Anime Interface - Updated to match backend schema
 export interface Anime {
   id: number;
-  titel: string;
+  titel_de: string;
+  titel_jp?: string | null;
+  titel_org?: string | null;
+  titel_en?: string | null;
+  synonyme?: string | null;
   status: AnimeStatus;
-  beschreibung: string;
-  anime_loads_url: string;
-  cover_image_url: string | null;
-  cover_local_path: string | null;
-  erstellungsdatum: string;
-  aktualisierungsdatum: string;
-  title_variants?: string[];
-  episodes?: Episode[];
+  beschreibung?: string | null;
+  anime_loads_url?: string | null;
+  cover_image_url?: string | null;
+  cover_local_path?: string | null;
+  typ?: string | null;
+  jahr?: number | null;
+  episoden_anzahl?: string | null;
+  laufzeit?: string | null;
+  hauptgenre?: string | null;
+  nebengenres?: string | null;
+  tags?: string | null;
+  anisearch_url?: string | null;
+  hinzugefuegt_am: string;
+  zuletzt_aktualisiert_am: string;
+  episoden?: Episode[];
+}
+
+// Interface für die Erstellung eines neuen Animes
+export interface AnimeCreate {
+  titel_de: string;
+  titel_jp?: string;
+  titel_org?: string;
+  titel_en?: string;
+  synonyme?: string;
+  status?: AnimeStatus;
+  beschreibung?: string;
+  anime_loads_url?: string;
+  cover_image_url?: string;
+  typ?: string;
+  jahr?: number;
+  episoden_anzahl?: string;
+  laufzeit?: string;
+  hauptgenre?: string;
+  nebengenres?: string;
+  tags?: string;
+  anisearch_url?: string;
+}
+
+// Interface für die Aktualisierung eines Animes
+export interface AnimeUpdate {
+  titel_de?: string;
+  titel_jp?: string;
+  titel_org?: string;
+  titel_en?: string;
+  synonyme?: string;
+  status?: AnimeStatus;
+  beschreibung?: string;
+  anime_loads_url?: string;
+  cover_image_url?: string;
+  typ?: string;
+  jahr?: number;
+  episoden_anzahl?: string;
+  laufzeit?: string;
+  hauptgenre?: string;
+  nebengenres?: string;
+  tags?: string;
+  anisearch_url?: string;
 }
 
 // Episode Interface
@@ -46,12 +99,22 @@ export interface Episode {
   titel: string;
   status: EpisodeStatus;
   availability_status: EpisodeAvailabilityStatus;
-  stream_link: string | null;
-  local_file_path: string | null;
-  air_date: string | null;
-  anime_loads_episode_url: string | null;
-  erstellungsdatum: string;
-  aktualisierungsdatum: string;
+  stream_link?: string | null;
+  local_file_path?: string | null;
+  air_date?: string | null;
+  anime_loads_episode_url?: string | null;
+  hinzugefuegt_am: string;
+  zuletzt_aktualisiert_am: string;
+}
+
+// Episode Create Interface
+export interface EpisodeCreate {
+  anime_id: number;
+  episoden_nummer: number;
+  titel?: string;
+  status?: EpisodeStatus;
+  air_date?: string;
+  anime_loads_episode_url?: string;
 }
 
 // API Response Interfaces

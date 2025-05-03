@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
-import { Anime, Episode, AnimeListResponse, ApiResponse } from '../types';
+import { Anime, Episode, AnimeListResponse, ApiResponse, AnimeCreate, AnimeUpdate } from '../types';
 
 // API Basis-URL konfigurieren
 const API_BASE_URL = 'http://192.168.178.40:8000/api';
@@ -64,6 +64,26 @@ export const animeService = {
   updateAnimeStatus: async (id: number, status: string): Promise<ApiResponse<Anime>> => {
     try {
       const response = await api.patch<Anime>(`/animes/${id}`, { status });
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Einen neuen Anime erstellen
+  createAnime: async (animeData: AnimeCreate): Promise<ApiResponse<Anime>> => {
+    try {
+      const response = await api.post<Anime>('/animes', animeData);
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Einen vorhandenen Anime aktualisieren
+  updateAnime: async (id: number, animeData: AnimeUpdate): Promise<ApiResponse<Anime>> => {
+    try {
+      const response = await api.put<Anime>(`/animes/${id}`, animeData);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);

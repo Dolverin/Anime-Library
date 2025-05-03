@@ -23,6 +23,7 @@ const NavBar = () => {
             <Nav.Link href="/">Startseite</Nav.Link>
             <Nav.Link href="/meine-animes">Meine Animes</Nav.Link>
             <Nav.Link href="/verfügbar">Verfügbar</Nav.Link>
+            <Nav.Link href="/anime-hinzufuegen">Anime hinzufügen</Nav.Link>
           </Nav>
           <Form className="d-flex" onSubmit={handleSuche}>
             <Form.Control

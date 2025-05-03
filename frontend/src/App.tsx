@@ -9,6 +9,7 @@ import AnimeDetailPage from './pages/AnimeDetailPage'
 import SearchPage from './pages/SearchPage'
 import MyAnimes from './pages/MyAnimes'
 import AvailableAnimes from './pages/AvailableAnimes'
+import AddAnimePage from './pages/AddAnimePage'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route path="/suche" element={<SearchPage />} />
             <Route path="/meine-animes" element={<MyAnimes />} />
             <Route path="/verfügbar" element={<AvailableAnimes />} />
+            <Route path="/anime-hinzufuegen" element={<AddAnimePage />} />
             <Route path="*" element={<div className="container mt-5 text-center"><h2>404 - Seite nicht gefunden</h2></div>} />
           </Routes>
         </main>
