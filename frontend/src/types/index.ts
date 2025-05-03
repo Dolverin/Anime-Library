@@ -128,3 +128,16 @@ export interface ApiResponse<T> {
   error?: string;
   status: number;
 }
+
+// Externe Anime-Suche Interfaces
+export interface ExternalAnimeSearchResult {
+  id: string;
+  title: string;
+  url: string;
+  image_url?: string;
+}
+
+export interface AnimeScrapingResult {
+  anime: AnimeCreate;
+  episodes: EpisodeCreate[];
+}

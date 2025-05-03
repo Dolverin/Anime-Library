@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict
 
 from .. import crud, models, schemas
 from ..database import get_db
+from ..scraper.scraper import search_anime, scrape_anime, scrape_episode_list
 
 router = APIRouter(
     prefix="/api/animes",
@@ -49,5 +50,41 @@ def delete_single_anime(anime_id: int, db: Session = Depends(get_db)):
     if db_anime is None:
         raise HTTPException(status_code=404, detail="Anime not found")
     return db_anime
+
+@router.get("/search-external", response_model=List[Dict])
+def search_external_anime(query: str):
+    """
+    Sucht nach Animes auf anime-loads.org anhand eines Suchbegriffs.
+    
+    Args:
+        query: Der Suchbegriff
+        
+    Returns:
+        Liste von Anime-Ergebnissen mit Titel, URL und Bild
+    """
+    results = search_anime(query)
+    return results or []
+
+@router.get("/scrape")
+def scrape_anime_by_url(url: str):
+    """
+    Scrapt einen Anime von anime-loads.org anhand einer URL.
+    
+    Args:
+        url: Die URL der Anime-Detailseite
+        
+    Returns:
+        Anime-Informationen und Episodenliste
+    """
+    anime_data = scrape_anime(url)
+    episodes_data = scrape_episode_list(url)
+    
+    if not anime_data:
+        raise HTTPException(status_code=404, detail="Anime konnte nicht gefunden oder geparst werden.")
+    
+    return {
+        "anime": anime_data,
+        "episodes": episodes_data or []
+    }
 
 # Add routes for episodes later (e.g., POST /{anime_id}/episodes/)

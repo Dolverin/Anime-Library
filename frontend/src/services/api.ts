@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
-import { Anime, Episode, AnimeListResponse, ApiResponse, AnimeCreate, AnimeUpdate, EpisodeCreate } from '../types';
+import { Anime, Episode, AnimeListResponse, ApiResponse, AnimeCreate, AnimeUpdate, EpisodeCreate, ExternalAnimeSearchResult, AnimeScrapingResult } from '../types';
 
 // API Basis-URL konfigurieren
 const API_BASE_URL = 'http://192.168.178.40:8000/api';
@@ -84,6 +84,26 @@ export const animeService = {
   updateAnime: async (id: number, animeData: AnimeUpdate): Promise<ApiResponse<Anime>> => {
     try {
       const response = await api.put<Anime>(`/animes/${id}`, animeData);
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+  
+  // Externe Anime-Suche auf anime-loads.org
+  searchExternalAnime: async (query: string): Promise<ApiResponse<ExternalAnimeSearchResult[]>> => {
+    try {
+      const response = await api.get<ExternalAnimeSearchResult[]>(`/animes/search-external?query=${encodeURIComponent(query)}`);
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+  
+  // Scrape einen Anime von anime-loads.org
+  scrapeAnimeByUrl: async (url: string): Promise<ApiResponse<AnimeScrapingResult>> => {
+    try {
+      const response = await api.get<AnimeScrapingResult>(`/animes/scrape?url=${encodeURIComponent(url)}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);

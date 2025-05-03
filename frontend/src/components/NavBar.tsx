@@ -1,4 +1,4 @@
-import { Navbar, Container, Nav, Form, Button } from 'react-bootstrap';
+import { Navbar, Container, Nav, Form, Button, NavLink } from 'react-bootstrap';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,10 +20,14 @@ const NavBar = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
-            <Nav.Link href="/">Startseite</Nav.Link>
-            <Nav.Link href="/meine-animes">Meine Animes</Nav.Link>
-            <Nav.Link href="/verfügbar">Verfügbar</Nav.Link>
-            <Nav.Link href="/anime-hinzufuegen">Anime hinzufügen</Nav.Link>
+            <Nav.Link as={NavLink} to="/">Startseite</Nav.Link>
+            <Nav.Link as={NavLink} to="/meine-animes">Meine Animes</Nav.Link>
+            <Nav.Link as={NavLink} to="/verfügbar">Verfügbar</Nav.Link>
+            <Nav.Link as={NavLink} to="/anime-hinzufuegen">Anime hinzufügen</Nav.Link>
+            <Nav.Link as={NavLink} to="/anime-loads-suche">
+              <i className="bi bi-search me-1"></i>
+              Anime-Loads Suche
+            </Nav.Link>
           </Nav>
           <Form className="d-flex" onSubmit={handleSuche}>
             <Form.Control

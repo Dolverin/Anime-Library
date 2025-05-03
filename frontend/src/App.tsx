@@ -5,14 +5,15 @@ import './App.css'
 // Komponenten importieren
 import NavBar from './components/NavBar'
 import HomePage from './pages/HomePage'
-import AnimeDetailPage from './pages/AnimeDetailPage'
 import SearchPage from './pages/SearchPage'
 import MyAnimes from './pages/MyAnimes'
 import AvailableAnimes from './pages/AvailableAnimes'
+import AnimeDetailPage from './pages/AnimeDetailPage'
 import AddAnimePage from './pages/AddAnimePage'
 import EditAnimePage from './pages/EditAnimePage'
 import AddEpisodePage from './pages/AddEpisodePage'
 import EditEpisodePage from './pages/EditEpisodePage'
+import SearchAnimePage from './pages/SearchAnimePage'
 
 function App() {
   return (
@@ -30,12 +31,13 @@ function App() {
             <Route path="/meine-animes" element={<MyAnimes />} />
             <Route path="/verfügbar" element={<AvailableAnimes />} />
             <Route path="/anime-hinzufuegen" element={<AddAnimePage />} />
+            <Route path="/anime-loads-suche" element={<SearchAnimePage />} />
             <Route path="*" element={<div className="container mt-5 text-center"><h2>404 - Seite nicht gefunden</h2></div>} />
           </Routes>
         </main>
         <footer className="text-center py-4 mt-5 border-top">
           <div className="container">
-            <p className="mb-0 text-muted">Anime Bibliothek &copy; {new Date().getFullYear()}</p>
+            <p className="mb-0">&copy; {new Date().getFullYear()} Anime Bibliothek</p>
           </div>
         </footer>
       </div>
