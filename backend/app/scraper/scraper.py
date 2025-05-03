@@ -545,6 +545,23 @@ def extract_episode_list(soup: BeautifulSoup) -> List[Dict[str, Any]]:
                         # Konstruiere den Source-Link
                         source_link = f"{base_url}#downloads_episodes_{release_id}_cnl"
                         
+                        # Extrahiere die eigentliche Episodennummer aus dem Text
+                        # Bisher nur das "1" aus "1 Solo Leveling: Wie man stärker wird"
+                        matched_episode_number = None
+                        if link_text:
+                            # Versuche, die echte Episodennummer zu extrahieren
+                            number_matches = re.match(r'^(\d+)', link_text.strip())
+                            if number_matches:
+                                try:
+                                    matched_episode_number = int(number_matches.group(1))
+                                    logger.debug(f"Echte Episodennummer aus Text extrahiert: {matched_episode_number} (aus '{link_text}')")
+                                except (ValueError, IndexError):
+                                    pass
+                        
+                        # Wenn eine echte Episodennummer gefunden wurde, verwende diese statt der erkannten Nummer
+                        if matched_episode_number is not None:
+                            episode_number = matched_episode_number
+                        
                         # Speichere den Source-Link für diese Episode und Quelle
                         if episode_number not in source_episode_links:
                             source_episode_links[episode_number] = {}
@@ -625,6 +642,17 @@ def extract_episode_list(soup: BeautifulSoup) -> List[Dict[str, Any]]:
                                 break
                             except (ValueError, IndexError):
                                 continue
+                
+                # Extrahiere direkt die Episodennummer vom Anfang des Textes (z.B. "1 Solo Leveling")
+                if not detected_number and link_text:
+                    # Versuche, die echte Episodennummer zu extrahieren
+                    number_matches = re.match(r'^(\d+)', link_text.strip())
+                    if number_matches:
+                        try:
+                            detected_number = int(number_matches.group(1))
+                            logger.debug(f"Echte Episodennummer vom Anfang des Texts extrahiert: {detected_number} (aus '{link_text}')")
+                        except (ValueError, IndexError):
+                            pass
                 
                 # 2. Versuche, Episodennummer aus der URL zu extrahieren, falls nicht im Text gefunden
                 if not detected_number and link_url:
