@@ -19,6 +19,12 @@ class EpisodeStatus(str, enum.Enum):
     owned = "owned"
     watched = "watched"
 
+class EpisodeAvailabilityStatus(str, enum.Enum):
+    NOT_AVAILABLE = "not_available"              # Episode ist nirgendwo verfügbar
+    AVAILABLE_ONLINE = "available_online"        # Episode ist online verfügbar (aber nicht lokal)
+    OWNED_LOCALLY = "owned_locally"              # Episode ist lokal vorhanden (aber nicht online)
+    OWNED_AND_AVAILABLE_ONLINE = "owned_and_available_online"  # Episode ist sowohl online als auch lokal verfügbar
+
 class Anime(Base):
     __tablename__ = "animes"
 
@@ -79,6 +85,8 @@ class Episode(Base):
     episoden_nummer = Column(Integer, nullable=False)
     titel = Column(String(255), nullable=True)
     status = Column(Enum(EpisodeStatus), nullable=False, default=EpisodeStatus.missing)
+    availability_status = Column(Enum(EpisodeAvailabilityStatus), nullable=False, default=EpisodeAvailabilityStatus.NOT_AVAILABLE)
+    local_path = Column(String(512), nullable=True)  # Pfad zur lokalen Datei
     air_date = Column(Date, nullable=True)
     anime_loads_episode_url = Column(String(512), nullable=True)
     hinzugefuegt_am = Column(TIMESTAMP, server_default=func.now())

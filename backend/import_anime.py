@@ -15,6 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.scraper.scraper import get_page_content, extract_anime_info, extract_episode_list
 from app import crud, schemas, models
 from app.database import get_db, SessionLocal
+from app.models import EpisodeAvailabilityStatus
 
 # Logger konfigurieren
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -127,20 +128,34 @@ def import_anime(url: str) -> Optional[models.Anime]:
                 existing_episode = crud.get_episode_by_url(db, ep_data.get('anime_loads_episode_url', ''))
                 
                 if existing_episode:
-                    logger.info(f"Episode {ep_data.get('number')} existiert bereits, überspringe...")
-                    continue
-                
-                episode_create = schemas.EpisodeCreate(
-                    episoden_nummer=ep_data.get('number', 0),
-                    titel=ep_data.get('title', f"Episode {ep_data.get('number', 0)}"),
-                    status="missing",
-                    anime_loads_episode_url=ep_data.get('anime_loads_episode_url', None),
-                    air_date=ep_data.get('air_date', None),
-                    anime_id=anime.id
-                )
-                
-                crud.create_episode(db, episode_create, anime.id)
-                logger.info(f"Episode {ep_data.get('number')} erstellt")
+                    update_needed = False
+                    if existing_episode.availability_status not in [EpisodeAvailabilityStatus.AVAILABLE_ONLINE, EpisodeAvailabilityStatus.OWNED_AND_AVAILABLE_ONLINE]:
+                        existing_episode.availability_status = EpisodeAvailabilityStatus.AVAILABLE_ONLINE
+                        update_needed = True
+
+                    current_stream_link = ep_data.get('stream_link')
+                    if existing_episode.stream_link != current_stream_link:
+                        existing_episode.stream_link = current_stream_link
+                        update_needed = True
+
+                    if update_needed:
+                        db.add(existing_episode) # Stage the changes
+                        logger.info(f"Updated existing episode {ep_data.get('number')} of {anime.title} (status/link)")
+                    else:
+                        logger.info(f"Episode {ep_data.get('number')} for {anime.title} already exists and is up-to-date.")
+                else:
+                    episode_create = schemas.EpisodeCreate(
+                        episoden_nummer=ep_data.get('number', 0),
+                        titel=ep_data.get('title', f"Episode {ep_data.get('number', 0)}"),
+                        status="missing",
+                        anime_loads_episode_url=ep_data.get('anime_loads_episode_url', None),
+                        air_date=ep_data.get('air_date', None),
+                        anime_id=anime.id,
+                        availability_status=EpisodeAvailabilityStatus.AVAILABLE_ONLINE
+                    )
+                    
+                    crud.create_episode(db, episode_create, anime.id)
+                    logger.info(f"Episode {ep_data.get('number')} erstellt")
         
         # Importiere Relationen, falls vorhanden
         if anime_data.get('relations'):
@@ -183,6 +198,7 @@ def import_anime(url: str) -> Optional[models.Anime]:
                     db.commit()
                     logger.info(f"Relation erstellt: {anime.titel} -> {target_anime.titel} ({relation_type})")
         
+        db.commit()
         logger.info(f"Import erfolgreich abgeschlossen für: {anime.titel}")
         return anime
         
