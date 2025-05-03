@@ -24,6 +24,8 @@
 .anime-card {
   transition: transform 0.2s, box-shadow 0.2s;
   height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .anime-card:hover {
@@ -34,17 +36,85 @@
 .card-img-container {
   height: 250px;
   overflow: hidden;
+  position: relative;
 }
 
 .anime-cover {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.anime-card:hover .anime-cover {
+  transform: scale(1.05);
+}
+
+/* Anime-Listen Stile */
+.list-view .list-item {
+  transition: background-color 0.2s ease;
+}
+
+.list-view .list-item:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+  cursor: pointer;
+}
+
+.list-header {
+  background-color: #f8f9fa;
+  border-radius: 4px 4px 0 0;
+}
+
+/* Filter Card Stile */
+.filter-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1.5rem;
+}
+
+.filter-card .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.view-mode-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.view-mode-toggle .btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Pagination Stile */
+.pagination {
+  margin-top: 2rem;
+}
+
+.pagination .page-link {
+  border-radius: 4px;
+  margin: 0 2px;
+  color: #0d6efd;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: white;
 }
 
 /* Navigation */
 .navbar {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Badge Stile */
+.badge {
+  font-weight: 500;
+  padding: 0.4em 0.6em;
+  border-radius: 4px;
 }
 
 /* Episodenliste */
@@ -61,9 +131,163 @@
   padding: 3rem 0;
 }
 
+/* Suchfeld Stile */
+.search-container {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  color: #6c757d;
+}
+
+/* Anime Detail Page Stile */
+.anime-detail-container {
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.anime-detail-header {
+  position: relative;
+  height: 300px;
+  overflow: hidden;
+}
+
+.anime-detail-cover {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  filter: blur(5px);
+  transform: scale(1.1);
+}
+
+.anime-detail-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 90%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 20px;
+  color: white;
+}
+
+.anime-detail-title {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  font-weight: bold;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.anime-detail-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.anime-detail-content {
+  padding: 20px;
+}
+
+.anime-description {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+/* Episoden Tabellen Stile */
+.episode-table {
+  margin-top: 1.5rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.episode-table th {
+  background-color: #f1f3f5;
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.episode-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.episode-table tr:last-child td {
+  border-bottom: none;
+}
+
+.episode-table tr:hover td {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.episode-action-icons {
+  display: flex;
+  gap: 8px;
+}
+
+.episode-action-icons .btn {
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Mobile Anpassungen */
 @media (max-width: 768px) {
   .card-img-container {
     height: 200px;
+  }
+  
+  .anime-detail-header {
+    height: 200px;
+  }
+  
+  .anime-detail-cover {
+    height: 200px;
+  }
+  
+  .anime-detail-title {
+    font-size: 1.5rem;
+  }
+  
+  .episode-table {
+    display: block;
+    overflow-x: auto;
+  }
+  
+  .anime-detail-overlay {
+    padding: 15px;
+  }
+}
+
+/* Tablet Anpassungen */
+@media (min-width: 769px) and (max-width: 992px) {
+  .anime-detail-header {
+    height: 250px;
+  }
+  
+  .anime-detail-cover {
+    height: 250px;
+  }
+  
+  .anime-detail-title {
+    font-size: 1.75rem;
   }
 }
