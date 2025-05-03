@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import { Anime, Episode, AnimeListResponse, ApiResponse } from '../types';
 
 // API Basis-URL konfigurieren
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://192.168.178.40:8000/api';
 
 // Axios-Instance mit Basis-Konfiguration
 const api = axios.create({

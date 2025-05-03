@@ -7,6 +7,8 @@ import NavBar from './components/NavBar'
 import HomePage from './pages/HomePage'
 import AnimeDetailPage from './pages/AnimeDetailPage'
 import SearchPage from './pages/SearchPage'
+import MyAnimes from './pages/MyAnimes'
+import AvailableAnimes from './pages/AvailableAnimes'
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/anime/:id" element={<AnimeDetailPage />} />
             <Route path="/suche" element={<SearchPage />} />
+            <Route path="/meine-animes" element={<MyAnimes />} />
+            <Route path="/verfügbar" element={<AvailableAnimes />} />
             <Route path="*" element={<div className="container mt-5 text-center"><h2>404 - Seite nicht gefunden</h2></div>} />
           </Routes>
         </main>

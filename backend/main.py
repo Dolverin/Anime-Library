@@ -28,7 +28,10 @@ app = FastAPI()
 # CORS-Einstellungen aktivieren, um Frontend-Zugriff zu erlauben
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Frontend-URL (Vite Dev Server)
+    allow_origins=[
+        "http://localhost:5173",       # Lokaler Entwicklungsserver
+        "http://192.168.178.40:5173"   # Netzwerk-URL des Frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
