@@ -8,6 +8,7 @@ import re
 import logging
 import random
 import time
+import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from datetime import datetime
@@ -427,114 +428,124 @@ def extract_episode_list(soup: BeautifulSoup) -> List[Dict[str, Any]]:
     """
     Extrahiert die Episodenliste aus dem BeautifulSoup-Objekt.
     
+    Berücksichtigt verschiedene Quellen (Hoster) für dieselben Episoden und
+    gruppiert sie anhand ihrer Episodennummern, um Duplikate zu vermeiden.
+    
     Args:
         soup: BeautifulSoup-Objekt der Anime-Detailseite
         
     Returns:
-        Liste von Episoden-Dictionaries
+        Liste von Episoden-Dictionaries mit einzigartigen Episoden
     """
-    episodes = []
+    episoden_dict = {}  # Dictionary zur Gruppierung von Episoden nach Nummer
     
     try:
-        # Verschiedene Selektoren für Episoden-Container ausprobieren
-        episode_selectors = [
-            'div.episodes div.episode',
-            'div.episode-list div.episode',
-            'div.episode-container',
-            'div.episode-list-item',
-            'div.episodes li',
-            'ul.episodes li',
-            'div.episodes a',
-            'table.episodes tr'
+        # Extrahiere alle Episoden-Links direkt von der Seite
+        episode_links = soup.select('div.episodes a, a.episode, div.download-links a, div.downloads a')
+        
+        if not episode_links:
+            logger.warning("Keine Episoden-Links gefunden, versuche alternativ...")
+            episode_links = soup.select('a[href*="episode"], a[href*="ep-"]')
+        
+        logger.info(f"Insgesamt {len(episode_links)} Episoden-Links gefunden")
+        
+        # Regex-Muster zur Extraktion von Episodennummern
+        ep_number_patterns = [
+            r'episode[_-]?(\d+)',  # episode1, episode-1, episode_1
+            r'ep[_-]?(\d+)',       # ep1, ep-1, ep_1
+            r'folge[_-]?(\d+)',    # folge1, folge-1, folge_1
+            r'[^a-zA-Z](\d+)[^a-zA-Z]',  # isolierte Zahl
+            r'Episode\s+(\d+)',    # "Episode 1"
+            r'Folge\s+(\d+)',      # "Folge 1"
+            r'Ep\.\s*(\d+)',       # "Ep. 1"
+            r'#(\d+)',             # "#1"
         ]
         
-        episode_containers = None
-        used_selector = None
-        
-        for selector in episode_selectors:
-            containers = soup.select(selector)
-            if containers:
-                episode_containers = containers
-                used_selector = selector
-                logger.info(f"Episoden gefunden mit Selektor '{selector}': {len(containers)}")
-                break
-        
-        if not episode_containers:
-            logger.warning("Keine Episoden gefunden mit den verfügbaren Selektoren")
-            return episodes
-        
-        for i, episode in enumerate(episode_containers, 1):
-            episode_data = {
-                'number': i,
-                'title': f"Episode {i}",
-                'url': "",
-                'anime_loads_episode_url': ""
-            }
+        # Analysiere jeden Link
+        for link in episode_links:
+            link_text = link.text.strip()
+            link_url = link.get('href', '')
             
-            # Versuche, die Nummer der Episode zu extrahieren
-            number_selectors = [
-                'div.number', 
-                'span.number', 
-                'span.episode-number',
-                'td:first-child',
-                '.episode-num'
-            ]
+            # Standardwerte für diesen Link
+            detected_number = None
+            episode_title = link_text if link_text else "Ohne Titel"
             
-            for selector in number_selectors:
-                number_elem = episode.select_one(selector)
-                if number_elem and number_elem.text.strip():
-                    try:
-                        # Versuche, die Nummer als Integer zu parsen
-                        number_text = number_elem.text.strip()
-                        if number_text.isdigit():
-                            episode_data['number'] = int(number_text)
-                        else:
-                            # Extraktion von Zahlen aus Text wie "Episode 5"
-                            matches = re.findall(r'\d+', number_text)
-                            if matches:
-                                episode_data['number'] = int(matches[0])
-                        break
-                    except (ValueError, IndexError):
-                        # Weiterhin die Standard-Nummerierung verwenden
-                        pass
+            # 1. Versuche, Episodennummer aus dem Text zu extrahieren
+            for pattern in ep_number_patterns:
+                if not detected_number:  # Sobald eine Nummer gefunden wurde, aufhören
+                    matches = re.search(pattern, link_text, re.IGNORECASE)
+                    if matches:
+                        try:
+                            detected_number = int(matches.group(1))
+                            logger.debug(f"Nummer {detected_number} aus Text extrahiert mit Muster '{pattern}': {link_text}")
+                            break
+                        except (ValueError, IndexError):
+                            continue
             
-            # Versuche, den Titel der Episode zu extrahieren
-            title_selectors = [
-                'div.title', 
-                'span.title', 
-                'a.episode-link',
-                'td:nth-child(2)',
-                '.episode-title'
-            ]
+            # 2. Versuche, Episodennummer aus der URL zu extrahieren, falls nicht im Text gefunden
+            if not detected_number and link_url:
+                for pattern in ep_number_patterns:
+                    matches = re.search(pattern, link_url, re.IGNORECASE)
+                    if matches:
+                        try:
+                            detected_number = int(matches.group(1))
+                            logger.debug(f"Nummer {detected_number} aus URL extrahiert mit Muster '{pattern}': {link_url}")
+                            break
+                        except (ValueError, IndexError):
+                            continue
             
-            for selector in title_selectors:
-                title_elem = episode.select_one(selector)
-                if title_elem and title_elem.text.strip():
-                    episode_title = title_elem.text.strip()
-                    if episode_title:
-                        episode_data['title'] = episode_title
-                        break
+            # 3. Fallback: Wenn keine Nummer gefunden wurde, verwende Position im Array
+            if not detected_number:
+                # Letzte Möglichkeit: Suche nach jeder Zahl im Text
+                all_numbers = re.findall(r'\d+', link_text)
+                if all_numbers and 1 <= int(all_numbers[0]) <= 100:  # Sinnvolle Grenzen für Episodennummern
+                    detected_number = int(all_numbers[0])
+                    logger.debug(f"Nummer {detected_number} als Fallback extrahiert: {link_text}")
             
-            # Versuche, den Link zur Episode zu extrahieren
-            link_elem = episode.select_one('a') or episode.parent if episode.name != 'a' else episode
+            # Wenn immer noch keine Nummer gefunden wurde, überspringen
+            if not detected_number:
+                logger.warning(f"Konnte keine Episodennummer für Link extrahieren: {link_text} / {link_url}")
+                continue
             
-            if link_elem and hasattr(link_elem, 'get') and link_elem.get('href'):
-                episode_url = link_elem.get('href')
-                # Absolute URL sicherstellen
-                if not episode_url.startswith(('http://', 'https://')):
-                    episode_url = urljoin(BASE_URL, episode_url)
+            # Normalisiere URL zu absoluter Form
+            absolute_url = link_url
+            if link_url and not link_url.startswith(('http://', 'https://')):
+                absolute_url = urljoin(BASE_URL, link_url)
+            
+            # Prüfe, ob diese Episode bereits existiert
+            if detected_number in episoden_dict:
+                # Hinzufügen der neuen Quelle zur bestehenden Episode
+                if absolute_url and absolute_url not in episoden_dict[detected_number]['urls']:
+                    episoden_dict[detected_number]['urls'].append(absolute_url)
+                    logger.debug(f"Neue Quelle für Episode {detected_number} hinzugefügt: {absolute_url}")
                 
-                episode_data['url'] = episode_url
-                episode_data['anime_loads_episode_url'] = episode_url
-            
-            # Standardwerte
-            episode_data['status'] = "nicht_gesehen"  # oder ein entsprechendes Enum
-            episode_data['air_date'] = None  # Könnte in Zukunft extrahiert werden
-            
-            episodes.append(episode_data)
-            
+                # Möglicherweise besserer Titel gefunden?
+                current_title = episoden_dict[detected_number]['title']
+                if (len(episode_title) > len(current_title) and 
+                    not current_title.startswith("Episode") and 
+                    not current_title.startswith("Folge")):
+                    episoden_dict[detected_number]['title'] = episode_title
+                    logger.debug(f"Besserer Titel für Episode {detected_number} gefunden: {episode_title}")
+            else:
+                # Neue Episode erstellen
+                episoden_dict[detected_number] = {
+                    'number': detected_number,
+                    'title': episode_title,
+                    'urls': [absolute_url] if absolute_url else [],
+                    'anime_loads_episode_url': absolute_url,  # Erste URL als Haupt-URL
+                    'status': "missing",  # Nach Vorgabe
+                    'air_date': None      # Könnte in Zukunft extrahiert werden
+                }
+                logger.debug(f"Neue einzigartige Episode gefunden: {detected_number} - {episode_title}")
+    
     except Exception as e:
         logger.error(f"Fehler beim Extrahieren der Episodenliste: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+    
+    # Konvertiere das Dictionary in eine sortierte Liste
+    episodes = [episoden_dict[key] for key in sorted(episoden_dict.keys())]
+    logger.info(f"Insgesamt {len(episodes)} einzigartige Episoden gefunden (aus allen Quellen)")
     
     return episodes
 
