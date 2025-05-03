@@ -1,13 +1,17 @@
-from fastapi import FastAPI, Response
-from fastapi import HTTPException
+from fastapi import FastAPI, Response, HTTPException, Depends
 import logging
 import requests
 from urllib.parse import unquote
 from app import models
-from app.database import engine, Base
+from app.database import engine, Base, SessionLocal, get_db
 from app.routers import animes, episodes
 from app.scraper.scraper import download_image
 import base64
+from fastapi.responses import FileResponse
+from app.utils.image import hash_url, download_or_proxy
+import os
+from app import crud
+from fastapi.staticfiles import StaticFiles
 
 # Logger konfigurieren (global)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -25,6 +29,11 @@ app.include_router(animes.router)
 
 # Include the episodes router
 app.include_router(episodes.router)
+
+# Verzeichnis für gecachte Coverbilder
+os.makedirs("static/covers", exist_ok=True)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def read_root():
@@ -97,3 +106,30 @@ async def image_proxy(url: str, response: Response):
     except Exception as e:
         logger.error(f"Fehler beim Proxen des Bildes: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Interner Serverfehler: {str(e)}")
+
+# Neue Route für Covers mit Caching
+@app.get("/api/cover/{anime_id}")
+def get_cover(anime_id: int, db=Depends(get_db)):
+    anime = crud.get_anime(db, anime_id)
+    if not anime:
+        raise HTTPException(status_code=404, detail="Anime nicht gefunden")
+
+    if not anime.cover_image_url:
+        raise HTTPException(status_code=404, detail="Keine Cover-URL gespeichert")
+
+    # Hash für Dateinamen
+    filename_hash = hash_url(anime.cover_image_url)
+    local_path = os.path.join("static", "covers", f"{filename_hash}.png")
+
+    # Wenn Datei nicht existiert, herunterladen
+    if not os.path.exists(local_path):
+        data = download_or_proxy(anime.cover_image_url)
+        if not data:
+            raise HTTPException(status_code=502, detail="Cover konnte nicht geladen werden")
+        with open(local_path, "wb") as f:
+            f.write(data)
+        # Pfad in DB speichern (optional)
+        anime.cover_local_path = local_path
+        db.commit()
+
+    return FileResponse(local_path, media_type="image/png")

@@ -40,6 +40,7 @@ class Anime(Base):
     anisearch_url = Column(String(255), nullable=True)
     cover_image_url = Column(String(255), nullable=True)
     cover_image_data = Column(LargeBinary(16777215), nullable=True)  # MEDIUMBLOB für größere Bilder (bis zu 16MB)
+    cover_local_path = Column(String(255), nullable=True)  # Pfad zum lokal gecachten Cover-Bild
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
