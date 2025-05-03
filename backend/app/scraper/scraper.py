@@ -372,8 +372,10 @@ def extract_anime_info(soup: BeautifulSoup, url: str, skip_cover_download: bool 
         Dictionary mit Anime-Informationen
     """
     anime_info = {
-        "title": "Unbekannt",
-        "original_titel": "",
+        "titel_de": "Unbekannt",
+        "titel_jp": "",
+        "titel_org": "",
+        "titel_en": "",
         "synonyme": "",
         "beschreibung": "Keine Beschreibung",
         "status": AnimeStatus.plan_to_watch,
@@ -404,24 +406,25 @@ def extract_anime_info(soup: BeautifulSoup, url: str, skip_cover_download: bool 
             'meta[property="og:title"]'
         ]
         
+        # Haupttitel extrahieren (wird in titel_de gespeichert)
         for selector in title_selectors:
             title_elem = soup.select_one(selector)
             if title_elem:
                 if selector == 'meta[property="og:title"]':
-                    anime_info["title"] = title_elem.get('content', '').strip()
+                    anime_info["titel_de"] = title_elem.get('content', '').strip()
                 else:
-                    anime_info["title"] = title_elem.text.strip()
-                logger.info(f"Titel gefunden mit Selektor '{selector}': {anime_info['title']}")
+                    anime_info["titel_de"] = title_elem.text.strip()
+                logger.info(f"Titel gefunden mit Selektor '{selector}': {anime_info['titel_de']}")
                 break
         
-        if anime_info["title"] == "Unbekannt":
+        if anime_info["titel_de"] == "Unbekannt":
             logger.warning("Titel konnte nicht gefunden werden")
             # Versuche alternativ den Seitentitel zu verwenden
             if soup.title:
                 page_title = soup.title.text.strip()
                 if page_title and page_title != "Such Ergebnisse":
-                    anime_info["title"] = page_title
-                    logger.info(f"Verwende Seitentitel: {anime_info['title']}")
+                    anime_info["titel_de"] = page_title
+                    logger.info(f"Verwende Seitentitel: {anime_info['titel_de']}")
         
         # Beschreibung
         description_selectors = [
@@ -446,7 +449,7 @@ def extract_anime_info(soup: BeautifulSoup, url: str, skip_cover_download: bool 
                     logger.info(f"Beschreibung gefunden mit Selektor '{selector}'")
                     # Suche nach "Quelle: aniSearch" in der Beschreibung
                     if "quelle: anisearch" in desc_text.lower():
-                        anime_info["anisearch_url"] = "https://www.anisearch.de/anime/?" + anime_info["title"].replace(" ", "+")
+                        anime_info["anisearch_url"] = "https://www.anisearch.de/anime/?" + anime_info["titel_de"].replace(" ", "+")
                         logger.info(f"AniSearch-Referenz in der Beschreibung gefunden")
                     break
         
@@ -504,8 +507,20 @@ def extract_anime_info(soup: BeautifulSoup, url: str, skip_cover_download: bool 
                 continue
                 
             if 'titel' in label:
-                if anime_info["original_titel"] == "":
-                    anime_info["original_titel"] = value
+                # Basierend auf dem Label entscheiden, welcher Titeltyp es ist
+                if 'japanisch' in label or 'jp' in label:
+                    anime_info["titel_jp"] = value
+                    logger.info(f"Japanischer Titel gefunden: {value}")
+                elif 'original' in label or 'org' in label:
+                    anime_info["titel_org"] = value
+                    logger.info(f"Originaltitel gefunden: {value}")
+                elif 'englisch' in label or 'en' in label:
+                    anime_info["titel_en"] = value
+                    logger.info(f"Englischer Titel gefunden: {value}")
+                # Wenn kein spezifischer Titeltyp erkannt wurde, aber der deutsche Titel noch nicht gesetzt ist
+                elif anime_info["titel_de"] == "Unbekannt":
+                    anime_info["titel_de"] = value
+                    logger.info(f"Deutscher Titel gefunden: {value}")
                 
             elif 'synonym' in label:
                 anime_info["synonyme"] = value
@@ -545,6 +560,24 @@ def extract_anime_info(soup: BeautifulSoup, url: str, skip_cover_download: bool 
                 if anisearch_link and anisearch_link.get('href'):
                     anime_info["anisearch_url"] = anisearch_link.get('href')
                     logger.info(f"AniSearch-Link gefunden: {anime_info['anisearch_url']}")
+        
+        # Wenn der Englische Titel nicht gefunden wurde, aber der deutsche Titel existiert
+        # und er sieht aus wie ein englischer Titel, kopiere ihn
+        if not anime_info["titel_en"] and anime_info["titel_de"] != "Unbekannt":
+            # Prüfe ob der Titel wahrscheinlich englisch ist (keine deutschen Umlaute, etc.)
+            if not any(c in anime_info["titel_de"] for c in "äöüÄÖÜß"):
+                anime_info["titel_en"] = anime_info["titel_de"]
+                logger.info(f"Englischer Titel aus deutschem Titel abgeleitet: {anime_info['titel_en']}")
+        
+        # Wenn der japanische Titel nicht gefunden wurde, aber der Anime-loads-ID enthält 
+        # japanische Romanisierung, nutze diese
+        if not anime_info["titel_jp"] and anime_info["anime_loads_id"]:
+            # Extrahiere den japanischen Titel aus der anime_loads_id
+            jp_title = anime_info["anime_loads_id"].replace('-', ' ').title()
+            # Prüfe ob der Titel nicht identisch mit dem deutschen Titel ist
+            if jp_title.lower() != anime_info["titel_de"].lower():
+                anime_info["titel_jp"] = jp_title
+                logger.info(f"Japanischer Titel aus URL abgeleitet: {anime_info['titel_jp']}")
         
         # Genres
         genre_selectors = [

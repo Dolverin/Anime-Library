@@ -39,14 +39,16 @@ class Episode(EpisodeBase):
 
 # Base schema for Anime data (common fields)
 class AnimeBase(BaseModel):
-    titel: str
+    titel_de: str  # Deutscher Titel (Primärtitel)
+    titel_jp: Optional[str] = None  # Japanischer Titel (Romanisiert)
+    titel_org: Optional[str] = None  # Originaltitel (in originaler Schrift)
+    titel_en: Optional[str] = None  # Englischer Titel
+    synonyme: Optional[str] = None  # Sonstige alternative Titel
+    
     status: AnimeStatus = AnimeStatus.plan_to_watch
     beschreibung: Optional[str] = None
     anime_loads_url: Optional[str] = None
     cover_image_url: Optional[str] = None
-    # Neue Felder
-    original_titel: Optional[str] = None
-    synonyme: Optional[str] = None
     typ: Optional[str] = None
     jahr: Optional[int] = None
     episoden_anzahl: Optional[str] = None
@@ -62,14 +64,16 @@ class AnimeCreate(AnimeBase):
 
 # Schema for updating an existing Anime (all fields optional)
 class AnimeUpdate(BaseModel):
-    titel: Optional[str] = None
+    titel_de: Optional[str] = None
+    titel_jp: Optional[str] = None
+    titel_org: Optional[str] = None
+    titel_en: Optional[str] = None
+    synonyme: Optional[str] = None
+    
     status: Optional[AnimeStatus] = None
     beschreibung: Optional[str] = None
     anime_loads_url: Optional[str] = None
     cover_image_url: Optional[str] = None
-    # Neue Felder
-    original_titel: Optional[str] = None
-    synonyme: Optional[str] = None
     typ: Optional[str] = None
     jahr: Optional[int] = None
     episoden_anzahl: Optional[str] = None

@@ -8,9 +8,37 @@ def get_anime(db: Session, anime_id: int) -> Optional[models.Anime]:
     """Get a single anime by its ID."""
     return db.query(models.Anime).filter(models.Anime.id == anime_id).first()
 
-def get_anime_by_titel(db: Session, titel: str) -> Optional[models.Anime]:
-    """Get a single anime by its title."""
-    return db.query(models.Anime).filter(models.Anime.titel == titel).first()
+def get_anime_by_titel_de(db: Session, titel_de: str) -> Optional[models.Anime]:
+    """Get a single anime by its German title."""
+    return db.query(models.Anime).filter(models.Anime.titel_de == titel_de).first()
+
+def get_anime_by_titel_jp(db: Session, titel_jp: str) -> Optional[models.Anime]:
+    """Get a single anime by its Japanese title."""
+    return db.query(models.Anime).filter(models.Anime.titel_jp == titel_jp).first()
+
+def get_anime_by_titel_en(db: Session, titel_en: str) -> Optional[models.Anime]:
+    """Get a single anime by its English title."""
+    return db.query(models.Anime).filter(models.Anime.titel_en == titel_en).first()
+
+def search_anime_by_any_titel(db: Session, search_term: str) -> List[models.Anime]:
+    """
+    Sucht nach Animes, bei denen der Suchbegriff in einem der Titelfelder vorkommt.
+    
+    Args:
+        db: Datenbankverbindung
+        search_term: Der zu suchende Begriff
+        
+    Returns:
+        Liste von gefundenen Anime-Objekten
+    """
+    search_pattern = f"%{search_term}%"
+    return db.query(models.Anime).filter(
+        (models.Anime.titel_de.like(search_pattern)) | 
+        (models.Anime.titel_jp.like(search_pattern)) | 
+        (models.Anime.titel_org.like(search_pattern)) | 
+        (models.Anime.titel_en.like(search_pattern)) | 
+        (models.Anime.synonyme.like(search_pattern))
+    ).all()
 
 def get_anime_by_url(db: Session, url: str) -> Optional[models.Anime]:
     """
@@ -34,11 +62,23 @@ def get_animes(
 def create_anime(db: Session, anime: schemas.AnimeCreate) -> models.Anime:
     """Create a new anime in the database."""
     db_anime = models.Anime(
-        titel=anime.titel,
+        titel_de=anime.titel_de,
+        titel_jp=anime.titel_jp,
+        titel_org=anime.titel_org,
+        titel_en=anime.titel_en,
+        synonyme=anime.synonyme,
         status=anime.status,
         beschreibung=anime.beschreibung,
         anime_loads_url=str(anime.anime_loads_url) if anime.anime_loads_url else None,
-        cover_image_url=str(anime.cover_image_url) if anime.cover_image_url else None
+        cover_image_url=str(anime.cover_image_url) if anime.cover_image_url else None,
+        typ=anime.typ,
+        jahr=anime.jahr,
+        episoden_anzahl=anime.episoden_anzahl,
+        laufzeit=anime.laufzeit,
+        hauptgenre=anime.hauptgenre,
+        nebengenres=anime.nebengenres,
+        tags=anime.tags,
+        anisearch_url=anime.anisearch_url
     )
     db.add(db_anime)
     db.commit()
@@ -58,7 +98,7 @@ def update_anime(db: Session, anime_id: int, anime_update: schemas.AnimeUpdate) 
         Das aktualisierte Anime-Objekt
     """
     db_anime = get_anime(db, anime_id)
-    update_data = anime_update.dict(exclude_unset=True)
+    update_data = anime_update.model_dump(exclude_unset=True)
     
     for key, value in update_data.items():
         setattr(db_anime, key, value)

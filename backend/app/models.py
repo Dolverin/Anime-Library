@@ -29,9 +29,13 @@ class Anime(Base):
     __tablename__ = "animes"
 
     id = Column(Integer, primary_key=True, index=True)
-    titel = Column(String(255), nullable=False)
-    original_titel = Column(String(255))
-    synonyme = Column(String(500))
+    # Neue, eindeutige Titelspalten
+    titel_de = Column(String(255), nullable=False)  # Deutscher Titel (Primärtitel)
+    titel_jp = Column(String(255))  # Japanischer Titel (Romanisiert)
+    titel_org = Column(String(255))  # Originaltitel (in originaler Schrift)
+    titel_en = Column(String(255))  # Englischer Titel
+    synonyme = Column(String(500))  # Sonstige alternative Titel
+    
     beschreibung = Column(Text)
     status = Column(Enum(AnimeStatus), default=AnimeStatus.plan_to_watch)
     typ = Column(String(50))  # Serie, Film, OVA, etc.
