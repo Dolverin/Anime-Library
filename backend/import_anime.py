@@ -21,12 +21,13 @@ from app.models import EpisodeAvailabilityStatus
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def import_anime(url: str) -> Optional[models.Anime]:
+def import_anime(url: str, skip_cover_download: bool = False) -> Optional[models.Anime]:
     """
     Importiert einen Anime von anime-loads.org in die Datenbank.
     
     Args:
         url: Die URL zur Anime-Seite
+        skip_cover_download: Wenn True, wird der Cover-Download übersprungen
         
     Returns:
         Das erstellte Anime-Modell oder None bei Fehler
@@ -41,7 +42,7 @@ def import_anime(url: str) -> Optional[models.Anime]:
         return None
     
     # Extrahiere Anime-Informationen
-    anime_data = extract_anime_info(soup, url)
+    anime_data = extract_anime_info(soup, url, skip_cover_download)
     
     if not anime_data:
         logger.error("Konnte keine Anime-Informationen extrahieren")
@@ -115,8 +116,8 @@ def import_anime(url: str) -> Optional[models.Anime]:
             logger.info("Erstelle neuen Anime in der Datenbank...")
             anime = crud.create_anime(db, anime_create)
         
-        # Cover-Bild-Daten speichern, falls vorhanden
-        if anime_data.get('cover_image_data'):
+        # Cover-Bild-Daten speichern, falls vorhanden und nicht übersprungen
+        if anime_data.get('cover_image_data') and not skip_cover_download:
             logger.info(f"Speichere Cover-Bild-Daten ({len(anime_data['cover_image_data'])} Bytes)")
             anime.cover_image_data = anime_data['cover_image_data']
             db.commit()
@@ -174,7 +175,7 @@ def import_anime(url: str) -> Optional[models.Anime]:
                 if not target_anime:
                     logger.info(f"Relation-Anime nicht in Datenbank, versuche Import: {relation.get('title', '')}")
                     # Versuche, den verknüpften Anime zu importieren
-                    target_anime = import_anime(relation_url)
+                    target_anime = import_anime(relation_url, skip_cover_download)
                 
                 if target_anime:
                     # Prüfe, ob die Relation bereits existiert
@@ -213,10 +214,11 @@ def main():
     """Hauptfunktion für das Import-Tool"""
     parser = argparse.ArgumentParser(description='Importiere Anime-Daten von anime-loads.org')
     parser.add_argument('url', help='URL zur Anime-Seite auf anime-loads.org')
+    parser.add_argument('--skip-cover', action='store_true', help='Cover-Download überspringen')
     
     args = parser.parse_args()
     
-    result = import_anime(args.url)
+    result = import_anime(args.url, args.skip_cover)
     
     if result:
         print(f"Import erfolgreich: {result.titel}")

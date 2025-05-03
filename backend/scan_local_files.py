@@ -21,7 +21,7 @@ from app.database import SessionLocal, get_db
 from app import crud
 
 # Logger konfigurieren
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Verschiedene Regex-Patterns für das Parsen von Dateinamen
@@ -56,6 +56,32 @@ def parse_filename(filename: str) -> Optional[Dict[str, str]]:
         Ein Dictionary mit 'title' und 'episode', oder None, wenn das Parsing fehlschlägt
     """
     basename = os.path.basename(filename)
+    logger.debug(f"Versuche Datei zu parsen: {filename}")
+    
+    # Spezialfall: Extrahiere den Anime-Titel aus dem übergeordneten Verzeichnis
+    # (für Dateien, die in einem Verzeichnis mit dem Anime-Namen liegen)
+    try:
+        # Versuche, den Anime-Namen aus dem Verzeichnisnamen zu extrahieren
+        anime_dir = os.path.basename(os.path.dirname(os.path.dirname(filename)))
+        logger.debug(f"Extrahierter Anime-Ordnername: {anime_dir}")
+        
+        if anime_dir and anime_dir != "Anime":
+            # Versuche, die Episodennummer aus dem Dateinamen zu extrahieren
+            # Für TV-Format (S01E01)
+            ep_match = re.search(r'S\d+E(\d{1,3})', basename)
+            if ep_match:
+                episode = int(ep_match.group(1))
+                logger.debug(f"Aus Verzeichnis geparst mit TV-Format: {filename} -> Titel: {anime_dir}, Episode: {episode}")
+                return {'title': anime_dir, 'episode': episode}
+            
+            # Alternativ: Versuche einfach eine Zahl zu finden
+            ep_match = re.search(r'[^0-9](\d{1,3})[^0-9]', basename)
+            if ep_match:
+                episode = int(ep_match.group(1))
+                logger.debug(f"Aus Verzeichnis geparst mit Zahlenmuster: {filename} -> Titel: {anime_dir}, Episode: {episode}")
+                return {'title': anime_dir, 'episode': episode}
+    except Exception as e:
+        logger.debug(f"Fehler beim Parsen des Verzeichnisnamens: {e}")
     
     # Versuche zuerst Pattern, die auf dem vollen Pfad basieren (für Verzeichnisstruktur-basiertes Matching)
     for pattern in [p for p in PATTERNS if '/' in p]:
@@ -73,6 +99,7 @@ def parse_filename(filename: str) -> Optional[Dict[str, str]]:
     
     # Dann versuche die restlichen Pattern mit dem Basisnamen
     for i, pattern in enumerate([p for p in PATTERNS if '/' not in p]):
+        logger.debug(f"Versuche Pattern {i+1}: {pattern} auf {basename}")
         match = re.match(pattern, basename)
         if match:
             data = match.groupdict()
@@ -97,8 +124,145 @@ def parse_filename(filename: str) -> Optional[Dict[str, str]]:
                 episode = int(ep_match.group(1))
                 logger.debug(f"Manuell geparst: {basename} -> Titel: {title}, Episode: {episode}")
                 return {'title': title, 'episode': episode}
-            
+    
     logger.warning(f"Konnte Datei nicht parsen: {basename}")
+    return None
+
+# Bekannte Titel-Mappings zwischen englischen/deutschen und japanischen Titeln
+TITLE_MAPPINGS = {
+    "a certain magical index": "toaru majutsu no index",
+    "index die zauberin": "toaru majutsu no index",
+    "to aru majutsu no index": "toaru majutsu no index",
+    "a certain scientific railgun": "toaru kagaku no railgun",
+    "railgun": "toaru kagaku no railgun",
+    "to love ru": "to-love-ru trouble",
+    "to love ru trouble": "to-love-ru trouble",
+    "to love ru darkness": "to-love-ru trouble darkness",
+    "to loveru": "to-love-ru trouble",
+    "to loveru trouble": "to-love-ru trouble",
+    "to loveru darkness": "to-love-ru trouble darkness",
+}
+
+def normalize_title(title: str) -> str:
+    """
+    Normalisiert einen Titel für den Vergleich (Kleinbuchstaben, keine Sonderzeichen).
+    
+    Args:
+        title: Der zu normalisierende Titel
+        
+    Returns:
+        Normalisierter Titel
+    """
+    if not title:
+        return ""
+    
+    # Zu Kleinbuchstaben konvertieren und Sonderzeichen entfernen
+    normalized = re.sub(r'[^\w\s]', '', title.lower())
+    normalized = re.sub(r'\s+', ' ', normalized).strip()
+    
+    logger.debug(f"Normalisierter Titel: '{title}' -> '{normalized}'")
+    
+    # Bekannte Titel-Mappings anwenden
+    if normalized in TITLE_MAPPINGS:
+        mapped = TITLE_MAPPINGS[normalized]
+        logger.debug(f"Titel-Mapping angewendet: '{normalized}' -> '{mapped}'")
+        return mapped
+    
+    # Zusätzlich: Versuche eine flexiblere Matching-Strategie für bestimmte Muster
+    if 'to love' in normalized:
+        logger.debug(f"'to love' gefunden in '{normalized}', versuche flexibles Matching")
+        if 'darkness' in normalized:
+            return "to-love-ru trouble darkness"
+        else:
+            return "to-love-ru trouble"
+    
+    return normalized
+
+def find_matching_anime(db: Session, title: str) -> Optional[Anime]:
+    """
+    Sucht nach einem passenden Anime in der Datenbank.
+    
+    Args:
+        db: Die Datenbankverbindung
+        title: Der zu suchende Anime-Titel
+        
+    Returns:
+        Das Anime-Objekt oder None, wenn kein passender Anime gefunden wurde
+    """
+    if not title:
+        return None
+    
+    logger.debug(f"Suche nach Anime-Titel: '{title}'")
+    
+    # Normalisiere den Eingabetitel
+    normalized_title = normalize_title(title)
+    
+    # Alle Anime aus der Datenbank abrufen für Debugging
+    all_anime = db.query(Anime).all()
+    logger.debug(f"Anzahl der Animes in der Datenbank: {len(all_anime)}")
+    if len(all_anime) <= 30:  # Nur anzeigen, wenn nicht zu viele
+        logger.debug(f"Anime-Titel in der Datenbank: {[a.titel for a in all_anime]}")
+    
+    # 1. Exakte Übereinstimmung mit normalisiertem Titel
+    for a in all_anime:
+        db_title_normalized = normalize_title(a.titel)
+        logger.debug(f"Vergleiche: '{normalized_title}' mit '{db_title_normalized}' (Original: '{a.titel}')")
+        
+        if normalized_title == db_title_normalized:
+            logger.info(f"Exakte Übereinstimmung gefunden: '{title}' -> '{a.titel}'")
+            return a
+    
+    # 2. Teilstring-Suche mit normalisiertem Titel
+    for a in all_anime:
+        db_title_normalized = normalize_title(a.titel)
+        if normalized_title in db_title_normalized or db_title_normalized in normalized_title:
+            logger.info(f"Teilstring-Übereinstimmung gefunden: '{title}' -> '{a.titel}'")
+            return a
+    
+    # 3. Suche in Synonymen (wenn vorhanden)
+    for a in all_anime:
+        if a.synonyme:
+            synonyms = [s.strip() for s in a.synonyme.split(',')]
+            logger.debug(f"Synonyme für '{a.titel}': {synonyms}")
+            
+            for synonym in synonyms:
+                synonym_normalized = normalize_title(synonym)
+                if normalized_title == synonym_normalized:
+                    logger.info(f"Übereinstimmung in Synonymen gefunden: '{title}' -> '{a.titel}' (Synonym: '{synonym}')")
+                    return a
+    
+    # 4. Spezial-Matching für bestimmte Titel (z.B. To Love Ru)
+    for a in all_anime:
+        # Für To Love Ru: Spezielle Logik anwenden
+        if 'to love' in normalized_title.lower() and 'to love' in normalize_title(a.titel).lower():
+            # Unterscheide zwischen Darkness und nicht-Darkness
+            is_input_darkness = 'darkness' in normalized_title.lower()
+            is_db_darkness = 'darkness' in normalize_title(a.titel).lower()
+            
+            if is_input_darkness == is_db_darkness:
+                logger.info(f"Spezial-Matching für To Love Ru gefunden: '{title}' -> '{a.titel}'")
+                return a
+    
+    # 5. Ähnlichkeitssuche für Verzeichnisnamen
+    # Wenn der Titel direkt aus einem Verzeichnisnamen kommt, versuche eine flexiblere Suche
+    if os.path.sep in title or title.count(' ') < 3:  # Wahrscheinlich ein Verzeichnisname
+        for a in all_anime:
+            # Prüfe auf Teilübereinstimmung in beide Richtungen mit kleineren Tokens
+            db_title_tokens = set(normalize_title(a.titel).split())
+            input_title_tokens = set(normalized_title.split())
+            
+            # Wenn mindestens 50% der Tokens übereinstimmen
+            common_tokens = db_title_tokens.intersection(input_title_tokens)
+            
+            logger.debug(f"Token-Vergleich für '{title}' vs '{a.titel}': " +
+                        f"Common: {common_tokens}, DB: {db_title_tokens}, Input: {input_title_tokens}")
+            
+            if common_tokens and (len(common_tokens) / len(db_title_tokens) > 0.5 or 
+                                  len(common_tokens) / len(input_title_tokens) > 0.5):
+                logger.info(f"Token-Übereinstimmung gefunden: '{title}' -> '{a.titel}'")
+                return a
+    
+    logger.warning(f"Kein passender Anime für '{title}' gefunden")
     return None
 
 def find_anime_files(directory: str, extensions: List[str] = None) -> List[str]:
@@ -124,41 +288,6 @@ def find_anime_files(directory: str, extensions: List[str] = None) -> List[str]:
                 anime_files.append(os.path.join(root, file))
                 
     return anime_files
-
-def find_matching_anime(db: Session, title: str) -> Optional[Anime]:
-    """
-    Sucht nach einem passenden Anime in der Datenbank.
-    
-    Args:
-        db: Die Datenbankverbindung
-        title: Der zu suchende Anime-Titel
-        
-    Returns:
-        Das Anime-Objekt oder None, wenn kein passender Anime gefunden wurde
-    """
-    # Verschiedene Varianten der Suche probieren
-    # 1. Exakte Übereinstimmung
-    anime = db.query(Anime).filter(Anime.titel == title).first()
-    if anime:
-        return anime
-        
-    # 2. Teilstring-Suche
-    anime = db.query(Anime).filter(Anime.titel.like(f"%{title}%")).first()
-    if anime:
-        return anime
-        
-    # 3. Ähnlichkeitssuche - vereinfachte Version
-    # Entferne Sonderzeichen und nicht-alphanumerische Zeichen für den Vergleich
-    simplified_title = re.sub(r'[^\w\s]', '', title).lower()
-    
-    all_anime = db.query(Anime).all()
-    for a in all_anime:
-        simplified_db_title = re.sub(r'[^\w\s]', '', a.titel).lower()
-        # Wenn einer ein Teilstring des anderen ist, betrachten wir das als Match
-        if simplified_title in simplified_db_title or simplified_db_title in simplified_title:
-            return a
-            
-    return None
 
 def update_episode_status(db: Session, anime: Anime, episode_number: int, file_path: str) -> None:
     """

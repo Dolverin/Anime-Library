@@ -359,13 +359,14 @@ def download_image(url: str) -> Optional[bytes]:
     logger.error(f"Alle Methoden zum Herunterladen des Bildes von {url} sind fehlgeschlagen")
     return None
 
-def extract_anime_info(soup: BeautifulSoup, url: str) -> Dict[str, Any]:
+def extract_anime_info(soup: BeautifulSoup, url: str, skip_cover_download: bool = False) -> Dict[str, Any]:
     """
     Extrahiert Anime-Informationen aus einem BeautifulSoup-Objekt.
     
     Args:
         soup: BeautifulSoup-Objekt mit dem HTML-Inhalt
         url: Original-URL der Anime-Seite
+        skip_cover_download: Wenn True, wird der Cover-Download übersprungen
         
     Returns:
         Dictionary mit Anime-Informationen
@@ -450,37 +451,41 @@ def extract_anime_info(soup: BeautifulSoup, url: str) -> Dict[str, Any]:
                     break
         
         # Cover-Bild
-        cover_selectors = [
-            'div.cover img', 
-            'div.anime-cover img', 
-            'div.media-left img',
-            'meta[property="og:image"]',
-            'div.poster img',
-            'img.cover-image'
-        ]
+        cover_url = None
+        cover_image_data = None
         
-        for selector in cover_selectors:
-            cover_elem = soup.select_one(selector)
-            if cover_elem:
-                if selector.startswith('meta'):
-                    cover_url = cover_elem.get('content', '')
-                else:
-                    cover_url = cover_elem.get('src', '')
-                
-                if cover_url and not cover_url.endswith('logo_meta.png'):
-                    # Absolute URL sicherstellen
-                    if not cover_url.startswith(('http://', 'https://')):
-                        cover_url = urljoin(BASE_URL, cover_url)
-                    
-                    anime_info["cover_image"] = cover_url
+        # 1. Versuche, das Cover-Bild aus dem OpenGraph-Tag zu extrahieren
+        og_image = soup.select_one('meta[property="og:image"]')
+        if og_image and og_image.get('content'):
+            cover_url = og_image.get('content')
+            logger.info(f"Cover-Bild gefunden mit Selektor 'meta[property=\"og:image\"]': {cover_url}")
+        else:
+            # 2. Versuche, ein Bild innerhalb der Anime-Detailseite zu finden
+            img_selectors = [
+                'img.cover',
+                '.anime-cover img',
+                '.anime-image img',
+                '.anime-detail-cover img',
+                '.anime-header img'
+            ]
+            
+            for selector in img_selectors:
+                img = soup.select_one(selector)
+                if img and img.get('src'):
+                    cover_url = img.get('src')
                     logger.info(f"Cover-Bild gefunden mit Selektor '{selector}': {cover_url}")
-                    
-                    # Cover-Bild herunterladen
-                    cover_image_data = download_image(cover_url)
-                    if cover_image_data:
-                        anime_info["cover_image_data"] = cover_image_data
-                        logger.info(f"Cover-Bild erfolgreich heruntergeladen: {len(cover_image_data)} Bytes")
                     break
+        
+        # Stelle sicher, dass wir eine absolute URL haben
+        if cover_url and not cover_url.startswith(('http://', 'https://')):
+            cover_url = urljoin(BASE_URL, cover_url)
+        
+        # Lade das Cover-Bild herunter, wenn eine URL gefunden wurde und das Überspringen nicht aktiviert ist
+        if cover_url and not skip_cover_download:
+            cover_image_data = download_image(cover_url)
+        
+        anime_info["cover_image"] = cover_url
+        anime_info["cover_image_data"] = cover_image_data
         
         # Metadaten extrahieren (Typ, Jahr, Episoden, etc.)
         info_rows = soup.select('div.info-table tr') or soup.select('table.info-table tr')
