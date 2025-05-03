@@ -37,9 +37,9 @@ class Anime(Base):
     tags = Column(String(500))
     anime_loads_url = Column(String(255), unique=True)
     anime_loads_id = Column(String(255), unique=True)
-    anisearch_url = Column(String(255))
-    cover_image_url = Column(String(255))
-    cover_image_data = Column(LargeBinary)  # Speichert das Bild als Binärdaten
+    anisearch_url = Column(String(255), nullable=True)
+    cover_image_url = Column(String(255), nullable=True)
+    cover_image_data = Column(LargeBinary(16777215), nullable=True)  # MEDIUMBLOB für größere Bilder (bis zu 16MB)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
