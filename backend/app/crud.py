@@ -12,6 +12,19 @@ def get_anime_by_titel(db: Session, titel: str) -> Optional[models.Anime]:
     """Get a single anime by its title."""
     return db.query(models.Anime).filter(models.Anime.titel == titel).first()
 
+def get_anime_by_url(db: Session, url: str) -> Optional[models.Anime]:
+    """
+    Holt einen Anime anhand seiner anime_loads_url.
+    
+    Args:
+        db: Datenbankverbindung
+        url: Die anime_loads_url des Anime
+        
+    Returns:
+        Das gefundene Anime-Objekt oder None, wenn keines gefunden wurde
+    """
+    return db.query(models.Anime).filter(models.Anime.anime_loads_url == url).first()
+
 def get_animes(
     db: Session, skip: int = 0, limit: int = 100
 ) -> List[models.Anime]:
@@ -32,21 +45,24 @@ def create_anime(db: Session, anime: schemas.AnimeCreate) -> models.Anime:
     db.refresh(db_anime)
     return db_anime
 
-def update_anime(db: Session, anime_id: int, anime_update: schemas.AnimeUpdate) -> Optional[models.Anime]:
-    """Update an existing anime."""
-    db_anime = get_anime(db, anime_id=anime_id)
-    if not db_anime:
-        return None
-
-    update_data = anime_update.model_dump(exclude_unset=True) # Use Pydantic V2 method
-
+def update_anime(db: Session, anime_id: int, anime_update: schemas.AnimeUpdate) -> models.Anime:
+    """
+    Aktualisiert einen Anime in der Datenbank.
+    
+    Args:
+        db: Datenbankverbindung
+        anime_id: ID des zu aktualisierenden Anime
+        anime_update: AnimeUpdate-Schema mit den zu aktualisierenden Feldern
+        
+    Returns:
+        Das aktualisierte Anime-Objekt
+    """
+    db_anime = get_anime(db, anime_id)
+    update_data = anime_update.dict(exclude_unset=True)
+    
     for key, value in update_data.items():
-        # Handle URL conversion if present
-        if key in ['anime_loads_url', 'cover_image_url'] and value is not None:
-            setattr(db_anime, key, str(value))
-        else:
-            setattr(db_anime, key, value)
-
+        setattr(db_anime, key, value)
+    
     db.commit()
     db.refresh(db_anime)
     return db_anime
@@ -77,6 +93,19 @@ def get_episode_by_anime_id_and_number(
         models.Episode.anime_id == anime_id,
         models.Episode.episoden_nummer == episoden_nummer
     ).first()
+
+def get_episode_by_url(db: Session, url: str) -> Optional[models.Episode]:
+    """
+    Holt eine Episode anhand ihrer anime_loads_episode_url.
+    
+    Args:
+        db: Datenbankverbindung
+        url: Die anime_loads_episode_url der Episode
+        
+    Returns:
+        Das gefundene Episode-Objekt oder None, wenn keines gefunden wurde
+    """
+    return db.query(models.Episode).filter(models.Episode.anime_loads_episode_url == url).first()
 
 def get_episodes_for_anime(db: Session, anime_id: int, skip: int = 0, limit: int = 1000) -> List[models.Episode]:
     """Get all episodes for a specific anime."""

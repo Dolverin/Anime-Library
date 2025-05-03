@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual environment
 /backend/venv/
+backend/venv/
 .env
 .venv
 env/
@@ -34,6 +35,9 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Test outputs
+backend/test_*.png
 
 # Other
 .DS_Store

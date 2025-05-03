@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional
 # Damit wir das Skript vom Projektstamm ausführen können
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.scraper.scraper import get_page_content, extract_anime_info, extract_episode_list, create_anime_schema, create_episode_schemas
+from app.scraper.scraper import get_page_content, extract_anime_info, extract_episode_list
 from app import crud, schemas, models
 from app.database import get_db, SessionLocal
 
@@ -133,9 +133,10 @@ def import_anime(url: str) -> Optional[models.Anime]:
                 episode_create = schemas.EpisodeCreate(
                     episoden_nummer=ep_data.get('number', 0),
                     titel=ep_data.get('title', f"Episode {ep_data.get('number', 0)}"),
-                    status="nicht_gesehen",
+                    status="missing",
                     anime_loads_episode_url=ep_data.get('anime_loads_episode_url', None),
-                    air_date=ep_data.get('air_date', None)
+                    air_date=ep_data.get('air_date', None),
+                    anime_id=anime.id
                 )
                 
                 crud.create_episode(db, episode_create, anime.id)
