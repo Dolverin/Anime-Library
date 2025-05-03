@@ -249,45 +249,230 @@
   justify-content: center;
 }
 
+/* Listen-Gruppe im Import-Tab */
+.list-group-item-action {
+  transition: background-color 0.2s ease;
+}
+
+.list-group-item-action:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Anime-Tab Stile */
+.nav-tabs .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0.5rem 1rem;
+}
+
+.nav-tabs .nav-link.active {
+  font-weight: 500;
+}
+
+/* Formular-Stile für Filter und Suche */
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Allgemeine Abstände und Ausrichtungen */
+.mb-custom-3 {
+  margin-bottom: 3rem;
+}
+
+.pb-custom-3 {
+  padding-bottom: 3rem;
+}
+
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fortschrittsbalken Stile */
+.progress {
+  height: 8px;
+  border-radius: 4px;
+  background-color: #e9ecef;
+  overflow: hidden;
+}
+
+.progress-bar {
+  transition: width 0.6s ease;
+}
+
 /* Mobile Anpassungen */
 @media (max-width: 768px) {
+  /* Anime-Karten anpassen */
   .card-img-container {
-    height: 200px;
+    height: 180px;
   }
   
+  /* Detail-Header verkleinern */
   .anime-detail-header {
-    height: 200px;
+    height: 180px;
   }
   
   .anime-detail-cover {
-    height: 200px;
+    height: 180px;
   }
   
   .anime-detail-title {
     font-size: 1.5rem;
   }
   
+  /* Tabelleninhalt scrollbar machen */
   .episode-table {
     display: block;
     overflow-x: auto;
   }
   
   .anime-detail-overlay {
-    padding: 15px;
+    padding: 12px;
+  }
+  
+  /* Filter anpassungen */
+  .filter-card .card-body {
+    padding: 0.75rem;
+  }
+  
+  /* Tabs anpassen */
+  .nav-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    display: flex;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .nav-tabs .nav-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Button Gruppen anpassen */
+  .view-mode-toggle .btn {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Badge anpassen */
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.5em;
+  }
+  
+  /* Listen Layout anpassen */
+  .list-view .list-item {
+    padding: 0.5rem;
+  }
+  
+  .list-header {
+    font-size: 0.9rem;
+  }
+  
+  /* Episoden Aktionen kompakter machen */
+  .episode-action-icons {
+    gap: 4px;
+  }
+  
+  .episode-action-icons .btn {
+    padding: 2px 6px;
+  }
+  
+  /* Filter Toggle Buttons */
+  .d-flex.gap-2 {
+    flex-wrap: wrap;
+  }
+
+  .d-flex.gap-2 .btn {
+    margin-bottom: 0.5rem;
+    flex: 1 0 auto;
+  }
+  
+  /* Anime Detail Info Badges */
+  .anime-detail-info {
+    gap: 5px;
+  }
+  
+  .anime-detail-info .badge {
+    font-size: 0.7rem;
+    padding: 0.25em 0.5em;
   }
 }
 
 /* Tablet Anpassungen */
 @media (min-width: 769px) and (max-width: 992px) {
+  /* Anime-Detail Anpassungen */
   .anime-detail-header {
-    height: 250px;
+    height: 220px;
   }
   
   .anime-detail-cover {
-    height: 250px;
+    height: 220px;
   }
   
   .anime-detail-title {
     font-size: 1.75rem;
+  }
+  
+  /* Card Grids optimieren */
+  .row > .col-md-3 {
+    flex: 0 0 auto;
+    width: 33.33333%;
+  }
+  
+  /* Episoden Aktionen */
+  .episode-action-icons {
+    gap: 6px;
+  }
+  
+  /* View Mode Toggle */
+  .view-mode-toggle .btn {
+    padding: 0.4rem 0.6rem;
+  }
+  
+  /* Filter und Sortiermöglichkeiten */
+  .filter-card .row > [class*="col-"] {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Verbesserte Druckansicht */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .anime-card, .episode-table {
+    break-inside: avoid;
+  }
+  
+  body {
+    font-size: 12pt;
+  }
+  
+  .anime-detail-container {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+  
+  .anime-detail-header {
+    height: 200px;
+  }
+  
+  .anime-detail-cover {
+    filter: none;
+  }
+  
+  .anime-detail-overlay {
+    background: rgba(0,0,0,0.5);
   }
 }
