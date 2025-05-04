@@ -53,6 +53,19 @@ def get_anime_by_url(db: Session, url: str) -> Optional[models.Anime]:
     """
     return db.query(models.Anime).filter(models.Anime.anime_loads_url == url).first()
 
+def get_anime_by_anime_loads_id(db: Session, anime_loads_id: str) -> Optional[models.Anime]:
+    """
+    Holt einen Anime anhand seiner anime_loads_id.
+    
+    Args:
+        db: Datenbankverbindung
+        anime_loads_id: Die anime_loads_id des Anime
+        
+    Returns:
+        Das gefundene Anime-Objekt oder None, wenn keines gefunden wurde
+    """
+    return db.query(models.Anime).filter(models.Anime.anime_loads_id == anime_loads_id).first()
+
 def get_animes(
     db: Session, skip: int = 0, limit: int = 100
 ) -> List[models.Anime]:

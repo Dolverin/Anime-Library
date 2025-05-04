@@ -32,31 +32,6 @@ def read_all_animes(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
     animes = crud.get_animes(db, skip=skip, limit=limit)
     return animes
 
-@router.get("/{anime_id}", response_model=schemas.Anime)
-def read_single_anime(anime_id: int, db: Session = Depends(get_db)):
-    """Retrieve a single anime by its ID, including its episodes."""
-    db_anime = crud.get_anime(db, anime_id=anime_id)
-    if db_anime is None:
-        raise HTTPException(status_code=404, detail="Anime not found")
-    # Note: This loads related episodes automatically due to the response_model and relationship
-    return db_anime 
-
-@router.put("/{anime_id}", response_model=schemas.AnimeSimple)
-def update_existing_anime(anime_id: int, anime: schemas.AnimeUpdate, db: Session = Depends(get_db)):
-    """Update an existing anime entry."""
-    db_anime = crud.update_anime(db, anime_id=anime_id, anime_update=anime)
-    if db_anime is None:
-        raise HTTPException(status_code=404, detail="Anime not found")
-    return db_anime
-
-@router.delete("/{anime_id}", response_model=schemas.AnimeSimple)
-def delete_single_anime(anime_id: int, db: Session = Depends(get_db)):
-    """Delete an anime entry."""
-    db_anime = crud.delete_anime(db, anime_id=anime_id)
-    if db_anime is None:
-        raise HTTPException(status_code=404, detail="Anime not found")
-    return db_anime
-
 @router.get("/search", response_model=List[schemas.AnimeSimple])
 def search_animes(q: str, db: Session = Depends(get_db)):
     """
@@ -87,6 +62,67 @@ def search_external_anime(query: str):
     """
     results = search_anime(query)
     return results or []
+
+@router.get("/combined-search")
+def combined_search(q: str, db: Session = Depends(get_db)):
+    """
+    Kombinierte Suche: Sucht zuerst in der Datenbank nach Animes und dann parallel auf anime-loads.org.
+    
+    Args:
+        q: Der Suchbegriff
+        
+    Returns:
+        Kombinierte Ergebnisse aus Datenbank und externer Suche mit Zeitstempelinformationen
+    """
+    if not q:
+        return {"db_results": [], "external_results": []}
+    
+    # Zuerst in der eigenen Datenbank suchen
+    db_animes = crud.search_anime_by_any_titel(db, search_term=q)
+    
+    # Ergebnisse mit Zeitstempelinformationen anreichern
+    db_results = []
+    for anime in db_animes:
+        # Neuestes Update-Datum der Episoden ermitteln
+        latest_episode_update = None
+        if anime.episodes:
+            latest_episode_update = max(episode.zuletzt_aktualisiert_am for episode in anime.episodes)
+            
+        db_results.append({
+            "id": anime.id,
+            "titel_de": anime.titel_de,
+            "titel_jp": anime.titel_jp,
+            "titel_en": anime.titel_en,
+            "titel_org": anime.titel_org,
+            "synonyme": anime.synonyme,
+            "anime_loads_id": anime.anime_loads_id,
+            "anime_loads_url": anime.anime_loads_url,
+            "cover_image_url": anime.cover_image_url,
+            "updated_at": anime.updated_at,
+            "episodes_count": len(anime.episodes),
+            "latest_episode_update": latest_episode_update
+        })
+    
+    # Parallel auf anime-loads.org suchen
+    external_results = search_anime(q) or []
+    
+    # Prüfen, welche externen Ergebnisse bereits in der Datenbank sind
+    for ext_result in external_results:
+        ext_id = ext_result.get("id")
+        if ext_id:
+            # Prüfen, ob dieser Anime bereits in der Datenbank existiert
+            existing_anime = crud.get_anime_by_anime_loads_id(db, anime_loads_id=ext_id)
+            if existing_anime:
+                ext_result["in_database"] = True
+                ext_result["db_id"] = existing_anime.id
+                ext_result["updated_at"] = existing_anime.updated_at
+            else:
+                ext_result["in_database"] = False
+    
+    return {
+        "db_results": db_results,
+        "external_results": external_results
+    }
 
 @router.get("/scrape")
 def scrape_anime_by_url(url: str):
@@ -136,5 +172,30 @@ def scan_local_anime_files(media_dir: str = Body(...), db: Session = Depends(get
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Fehler beim Scannen: {str(e)}")
+
+@router.get("/{anime_id}", response_model=schemas.Anime)
+def read_single_anime(anime_id: int, db: Session = Depends(get_db)):
+    """Retrieve a single anime by its ID, including its episodes."""
+    db_anime = crud.get_anime(db, anime_id=anime_id)
+    if db_anime is None:
+        raise HTTPException(status_code=404, detail="Anime not found")
+    # Note: This loads related episodes automatically due to the response_model and relationship
+    return db_anime 
+
+@router.put("/{anime_id}", response_model=schemas.AnimeSimple)
+def update_existing_anime(anime_id: int, anime: schemas.AnimeUpdate, db: Session = Depends(get_db)):
+    """Update an existing anime entry."""
+    db_anime = crud.update_anime(db, anime_id=anime_id, anime_update=anime)
+    if db_anime is None:
+        raise HTTPException(status_code=404, detail="Anime not found")
+    return db_anime
+
+@router.delete("/{anime_id}", response_model=schemas.AnimeSimple)
+def delete_single_anime(anime_id: int, db: Session = Depends(get_db)):
+    """Delete an anime entry."""
+    db_anime = crud.delete_anime(db, anime_id=anime_id)
+    if db_anime is None:
+        raise HTTPException(status_code=404, detail="Anime not found")
+    return db_anime
 
 # Add routes for episodes later (e.g., POST /{anime_id}/episodes/)

@@ -53,7 +53,41 @@ export const animeService = {
   // Anime nach Titel suchen
   searchAnimes: async (query: string): Promise<ApiResponse<AnimeListResponse>> => {
     try {
-      const response = await api.get<AnimeListResponse>(`/api/animes/search/?q=${encodeURIComponent(query)}`);
+      const response = await api.get<AnimeListResponse>(`/api/animes/search?q=${encodeURIComponent(query)}`);
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+
+  // Kombinierte Suche (Datenbank + anime-loads.org)
+  combinedSearch: async (query: string): Promise<ApiResponse<{
+    db_results: Array<{
+      id: number;
+      titel_de: string;
+      titel_jp?: string;
+      titel_en?: string;
+      titel_org?: string;
+      synonyme?: string;
+      anime_loads_id?: string;
+      anime_loads_url?: string;
+      cover_image_url?: string;
+      updated_at: Date;
+      episodes_count: number;
+      latest_episode_update?: Date;
+    }>,
+    external_results: Array<{
+      id: string;
+      title: string;
+      url: string;
+      image_url?: string;
+      in_database?: boolean;
+      db_id?: number;
+      updated_at?: Date;
+    }>
+  }>> => {
+    try {
+      const response = await api.get(`/api/animes/combined-search?q=${encodeURIComponent(query)}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -93,7 +127,7 @@ export const animeService = {
   // Externe Anime-Suche auf anime-loads.org
   searchExternalAnime: async (query: string): Promise<ApiResponse<ExternalAnimeSearchResult[]>> => {
     try {
-      const response = await api.get<ExternalAnimeSearchResult[]>(`/api/animes/search-external/?query=${encodeURIComponent(query)}`);
+      const response = await api.get<ExternalAnimeSearchResult[]>(`/api/animes/search-external?query=${encodeURIComponent(query)}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -103,7 +137,7 @@ export const animeService = {
   // Scrape einen Anime von anime-loads.org
   scrapeAnimeByUrl: async (url: string): Promise<ApiResponse<AnimeScrapingResult>> => {
     try {
-      const response = await api.get<AnimeScrapingResult>(`/api/animes/scrape/?url=${encodeURIComponent(url)}`);
+      const response = await api.get<AnimeScrapingResult>(`/api/animes/scrape?url=${encodeURIComponent(url)}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -148,7 +182,7 @@ export const episodeService = {
   // Episode-Status aktualisieren
   updateEpisodeStatus: async (episodeId: number, status: string): Promise<ApiResponse<Episode>> => {
     try {
-      const response = await api.patch<Episode>(`/api/episodes/${episodeId}/`, { status });
+      const response = await api.patch<Episode>(`/api/episodes/update/${episodeId}/`, { status });
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -168,7 +202,7 @@ export const episodeService = {
   // Eine Episode aktualisieren
   updateEpisode: async (episodeId: number, episodeData: Partial<Episode>): Promise<ApiResponse<Episode>> => {
     try {
-      const response = await api.put<Episode>(`/api/episodes/${episodeId}/`, episodeData);
+      const response = await api.put<Episode>(`/api/episodes/update/${episodeId}/`, episodeData);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -178,7 +212,7 @@ export const episodeService = {
   // Eine Episode löschen
   deleteEpisode: async (episodeId: number): Promise<ApiResponse<Episode>> => {
     try {
-      const response = await api.delete<Episode>(`/api/episodes/${episodeId}/`);
+      const response = await api.delete<Episode>(`/api/episodes/delete/${episodeId}/`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);

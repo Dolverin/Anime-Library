@@ -135,6 +135,9 @@ export interface ExternalAnimeSearchResult {
   title: string;
   url: string;
   image_url?: string;
+  in_database?: boolean;
+  db_id?: number;
+  updated_at?: Date;
 }
 
 export interface AnimeScrapingResult {
