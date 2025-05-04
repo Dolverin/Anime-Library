@@ -1,0 +1,19 @@
+/* NavBar.css */
+.custom-nav-link {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+.custom-nav-link:hover,
+.custom-nav-link:focus {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+}
+
+.custom-nav-link.active {
+  color: white;
+  font-weight: 500;
+}

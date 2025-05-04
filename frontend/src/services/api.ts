@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import { Anime, Episode, AnimeListResponse, ApiResponse, AnimeCreate, AnimeUpdate, EpisodeCreate, ExternalAnimeSearchResult, AnimeScrapingResult } from '../types';
 
 // API Basis-URL konfigurieren
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://localhost:8000';
 
 // Axios-Instance mit Basis-Konfiguration
 const api = axios.create({
@@ -104,6 +104,19 @@ export const animeService = {
   scrapeAnimeByUrl: async (url: string): Promise<ApiResponse<AnimeScrapingResult>> => {
     try {
       const response = await api.get<AnimeScrapingResult>(`/animes/scrape?url=${encodeURIComponent(url)}`);
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
+  
+  // Lokale Anime-Dateien scannen und importieren
+  scanLocalFiles: async (mediaDir: string): Promise<ApiResponse<{total_files: number, matched_animes: number, updated_episodes: number}>> => {
+    try {
+      const response = await api.post<{total_files: number, matched_animes: number, updated_episodes: number}>(
+        '/animes/scan-local-files', 
+        { media_dir: mediaDir }
+      );
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);

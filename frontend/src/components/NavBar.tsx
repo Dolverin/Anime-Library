@@ -1,6 +1,6 @@
-import { Navbar, Container, Nav, Form, Button, NavLink } from 'react-bootstrap';
+import { Navbar, Container, Nav, Form, Button } from 'react-bootstrap';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const NavBar = () => {
   const [suchBegriff, setSuchBegriff] = useState('');
@@ -16,18 +16,18 @@ const NavBar = () => {
   return (
     <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
       <Container>
-        <Navbar.Brand href="/">Anime Bibliothek</Navbar.Brand>
+        <Link to="/" className="navbar-brand">Anime Bibliothek</Link>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
-            <Nav.Link as={NavLink} to="/">Startseite</Nav.Link>
-            <Nav.Link as={NavLink} to="/meine-animes">Meine Animes</Nav.Link>
-            <Nav.Link as={NavLink} to="/verfügbar">Verfügbar</Nav.Link>
-            <Nav.Link as={NavLink} to="/anime-hinzufuegen">Anime hinzufügen</Nav.Link>
-            <Nav.Link as={NavLink} to="/anime-loads-suche">
+            <Link to="/" className="nav-link custom-nav-link">Startseite</Link>
+            <Link to="/meine-animes" className="nav-link custom-nav-link">Meine Animes</Link>
+            <Link to="/verfügbar" className="nav-link custom-nav-link">Verfügbar</Link>
+            <Link to="/anime-hinzufuegen" className="nav-link custom-nav-link">Anime hinzufügen</Link>
+            <Link to="/anime-loads-suche" className="nav-link custom-nav-link">
               <i className="bi bi-search me-1"></i>
               Anime-Loads Suche
-            </Nav.Link>
+            </Link>
           </Nav>
           <Form className="d-flex" onSubmit={handleSuche}>
             <Form.Control

@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import './App.css'
 
@@ -15,10 +16,22 @@ import AddEpisodePage from './pages/AddEpisodePage'
 import EditEpisodePage from './pages/EditEpisodePage'
 import SearchAnimePage from './pages/SearchAnimePage'
 
+// ScrollToTop-Komponente, um beim Routenwechsel nach oben zu scrollen
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  
+  return null;
+}
+
 function App() {
   return (
     <Router>
       <div className="app-container">
+        <ScrollToTop />
         <NavBar />
         <main className="app-content">
           <Routes>

@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from .. import crud, models, schemas
 from ..database import get_db
 from ..scraper.scraper import search_anime, scrape_anime, scrape_episode_list
+
+# Import der Scan-Funktionalität
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from scan_local_files import scan_and_update
 
 router = APIRouter(
     prefix="/api/animes",
@@ -86,5 +92,32 @@ def scrape_anime_by_url(url: str):
         "anime": anime_data,
         "episodes": episodes_data or []
     }
+
+@router.post("/scan-local-files", response_model=Dict[str, int])
+def scan_local_anime_files(media_dir: str = Body(...), db: Session = Depends(get_db)):
+    """
+    Scannt das angegebene Verzeichnis nach Anime-Dateien und aktualisiert die Datenbank.
+    
+    Args:
+        media_dir: Das zu scannende Verzeichnis
+        
+    Returns:
+        Dictionary mit Statistiken (gefundene Dateien, erkannte Animes, aktualisierte Episoden)
+    """
+    if not os.path.exists(media_dir):
+        raise HTTPException(status_code=404, detail=f"Verzeichnis '{media_dir}' existiert nicht.")
+    
+    if not os.path.isdir(media_dir):
+        raise HTTPException(status_code=400, detail=f"'{media_dir}' ist kein Verzeichnis.")
+    
+    try:
+        total_files, matched_animes, updated_episodes = scan_and_update(media_dir, db)
+        return {
+            "total_files": total_files,
+            "matched_animes": matched_animes,
+            "updated_episodes": updated_episodes
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fehler beim Scannen: {str(e)}")
 
 # Add routes for episodes later (e.g., POST /{anime_id}/episodes/)
