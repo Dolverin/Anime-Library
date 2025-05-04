@@ -33,7 +33,7 @@ export const animeService = {
   // Alle Animes abrufen
   getAllAnimes: async (): Promise<ApiResponse<AnimeListResponse>> => {
     try {
-      const response = await api.get<AnimeListResponse>('/animes');
+      const response = await api.get<AnimeListResponse>('/api/animes/');
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -43,7 +43,7 @@ export const animeService = {
   // Einen bestimmten Anime abrufen
   getAnime: async (id: number): Promise<ApiResponse<Anime>> => {
     try {
-      const response = await api.get<Anime>(`/animes/${id}`);
+      const response = await api.get<Anime>(`/api/animes/${id}/`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -53,7 +53,7 @@ export const animeService = {
   // Anime nach Titel suchen
   searchAnimes: async (query: string): Promise<ApiResponse<AnimeListResponse>> => {
     try {
-      const response = await api.get<AnimeListResponse>(`/animes/search?q=${encodeURIComponent(query)}`);
+      const response = await api.get<AnimeListResponse>(`/api/animes/search/?q=${encodeURIComponent(query)}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -63,7 +63,7 @@ export const animeService = {
   // Anime-Status aktualisieren
   updateAnimeStatus: async (id: number, status: string): Promise<ApiResponse<Anime>> => {
     try {
-      const response = await api.patch<Anime>(`/animes/${id}`, { status });
+      const response = await api.patch<Anime>(`/api/animes/${id}/`, { status });
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -73,7 +73,7 @@ export const animeService = {
   // Einen neuen Anime erstellen
   createAnime: async (animeData: AnimeCreate): Promise<ApiResponse<Anime>> => {
     try {
-      const response = await api.post<Anime>('/animes', animeData);
+      const response = await api.post<Anime>('/api/animes/', animeData);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -83,7 +83,7 @@ export const animeService = {
   // Einen vorhandenen Anime aktualisieren
   updateAnime: async (id: number, animeData: AnimeUpdate): Promise<ApiResponse<Anime>> => {
     try {
-      const response = await api.put<Anime>(`/animes/${id}`, animeData);
+      const response = await api.put<Anime>(`/api/animes/${id}/`, animeData);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -93,7 +93,7 @@ export const animeService = {
   // Externe Anime-Suche auf anime-loads.org
   searchExternalAnime: async (query: string): Promise<ApiResponse<ExternalAnimeSearchResult[]>> => {
     try {
-      const response = await api.get<ExternalAnimeSearchResult[]>(`/animes/search-external?query=${encodeURIComponent(query)}`);
+      const response = await api.get<ExternalAnimeSearchResult[]>(`/api/animes/search-external/?query=${encodeURIComponent(query)}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -103,7 +103,7 @@ export const animeService = {
   // Scrape einen Anime von anime-loads.org
   scrapeAnimeByUrl: async (url: string): Promise<ApiResponse<AnimeScrapingResult>> => {
     try {
-      const response = await api.get<AnimeScrapingResult>(`/animes/scrape?url=${encodeURIComponent(url)}`);
+      const response = await api.get<AnimeScrapingResult>(`/api/animes/scrape/?url=${encodeURIComponent(url)}`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -114,7 +114,7 @@ export const animeService = {
   scanLocalFiles: async (mediaDir: string): Promise<ApiResponse<{total_files: number, matched_animes: number, updated_episodes: number}>> => {
     try {
       const response = await api.post<{total_files: number, matched_animes: number, updated_episodes: number}>(
-        '/animes/scan-local-files', 
+        '/api/animes/scan-local-files/', 
         { media_dir: mediaDir }
       );
       return createApiResponse(response);
@@ -128,7 +128,7 @@ export const episodeService = {
   // Alle Episoden eines Animes abrufen
   getEpisodesByAnimeId: async (animeId: number): Promise<ApiResponse<Episode[]>> => {
     try {
-      const response = await api.get<Episode[]>(`/episodes/${animeId}`);
+      const response = await api.get<Episode[]>(`/api/episodes/${animeId}/`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -138,7 +138,7 @@ export const episodeService = {
   // Eine bestimmte Episode abrufen
   getEpisode: async (animeId: number, episodeId: number): Promise<ApiResponse<Episode>> => {
     try {
-      const response = await api.get<Episode>(`/episodes/${animeId}/${episodeId}`);
+      const response = await api.get<Episode>(`/api/episodes/${animeId}/${episodeId}/`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -148,7 +148,7 @@ export const episodeService = {
   // Episode-Status aktualisieren
   updateEpisodeStatus: async (episodeId: number, status: string): Promise<ApiResponse<Episode>> => {
     try {
-      const response = await api.patch<Episode>(`/episodes/${episodeId}`, { status });
+      const response = await api.patch<Episode>(`/api/episodes/${episodeId}/`, { status });
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -158,7 +158,7 @@ export const episodeService = {
   // Eine neue Episode erstellen
   createEpisode: async (animeId: number, episodeData: EpisodeCreate): Promise<ApiResponse<Episode>> => {
     try {
-      const response = await api.post<Episode>(`/episodes/${animeId}`, episodeData);
+      const response = await api.post<Episode>(`/api/episodes/${animeId}/`, episodeData);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -168,7 +168,7 @@ export const episodeService = {
   // Eine Episode aktualisieren
   updateEpisode: async (episodeId: number, episodeData: Partial<Episode>): Promise<ApiResponse<Episode>> => {
     try {
-      const response = await api.put<Episode>(`/episodes/${episodeId}`, episodeData);
+      const response = await api.put<Episode>(`/api/episodes/${episodeId}/`, episodeData);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);
@@ -178,7 +178,7 @@ export const episodeService = {
   // Eine Episode löschen
   deleteEpisode: async (episodeId: number): Promise<ApiResponse<Episode>> => {
     try {
-      const response = await api.delete<Episode>(`/episodes/${episodeId}`);
+      const response = await api.delete<Episode>(`/api/episodes/${episodeId}/`);
       return createApiResponse(response);
     } catch (error) {
       return handleApiError(error);

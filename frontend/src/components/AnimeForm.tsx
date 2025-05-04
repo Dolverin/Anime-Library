@@ -25,11 +25,12 @@ const AnimeForm: React.FC<AnimeFormProps> = ({
 
   const [validation, setValidation] = useState<{ [key: string]: string }>({});
 
+  // Nur einmal beim Mounten der Komponente ausführen, nicht bei jeder Änderung von initialData
   useEffect(() => {
-    if (initialData) {
+    if (initialData && Object.keys(initialData).length > 0) {
       setFormData(prevData => ({ ...prevData, ...initialData }));
     }
-  }, [initialData]);
+  }, []); // Leeres Dependency-Array bedeutet, dass der Effekt nur beim Mounten der Komponente ausgeführt wird
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

@@ -30,7 +30,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",       # Lokaler Entwicklungsserver
-        "http://192.168.178.40:5173"   # Netzwerk-URL des Frontend
+        "http://localhost:5175",       # Neuer Frontend-Port
+        "http://192.168.178.40:5173",  # Netzwerk-URL des Frontend
+        "http://192.168.178.40:5175"   # Netzwerk-URL mit neuem Port
     ],
     allow_credentials=True,
     allow_methods=["*"],

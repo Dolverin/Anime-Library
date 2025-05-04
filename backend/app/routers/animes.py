@@ -57,6 +57,23 @@ def delete_single_anime(anime_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Anime not found")
     return db_anime
 
+@router.get("/search", response_model=List[schemas.AnimeSimple])
+def search_animes(q: str, db: Session = Depends(get_db)):
+    """
+    Sucht nach Animes basierend auf einem Suchbegriff.
+    
+    Args:
+        q: Der Suchbegriff
+        
+    Returns:
+        Liste von Anime-Objekten, die dem Suchbegriff entsprechen
+    """
+    if not q:
+        return []
+    
+    animes = crud.search_anime_by_any_titel(db, search_term=q)
+    return animes
+
 @router.get("/search-external", response_model=List[Dict])
 def search_external_anime(query: str):
     """
