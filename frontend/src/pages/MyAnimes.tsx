@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Spinner, Alert, Form, InputGroup, Button, Pagination, Card, Badge, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Spinner, Alert, Form, InputGroup, Button, Pagination, Card, Badge } from 'react-bootstrap';
 import { AnimeStatus, Anime } from '../types';
 import { animeService } from '../services/api';
 import AnimeCard from '../components/AnimeCard';
 import { FaSearch, FaThList, FaTh, FaFileImport } from 'react-icons/fa';
+import ImportLocalFilesModal from '../components/ImportLocalFilesModal';
 
 // Konstanten für die Pagination
 const ITEMS_PER_PAGE = 12;
@@ -36,14 +37,6 @@ const MyAnimes = () => {
 
   // Anime Import Modal State
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
-  const [importPath, setImportPath] = useState<string>('/mnt/mediathek/Anime');
-  const [isImporting, setIsImporting] = useState<boolean>(false);
-  const [importResult, setImportResult] = useState<{
-    total_files: number;
-    matched_animes: number;
-    updated_episodes: number;
-  } | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAnimes = async () => {
@@ -237,36 +230,20 @@ const MyAnimes = () => {
     setCurrentPage(1);
   };
 
-  // Anime Dateien importieren
-  const handleImportAnimes = async () => {
-    if (!importPath.trim()) {
-      setImportError('Bitte gib einen gültigen Pfad ein.');
-      return;
+  // Import-Erfolgshandler - wird aufgerufen, wenn der Import erfolgreich war
+  const handleImportSuccess = async () => {
+    // Neu laden der Animes
+    setLoading(true);
+    const response = await animeService.getAllAnimes();
+    
+    if (response.error) {
+      setError(response.error);
+    } else if (response.data) {
+      const loadedAnimes = response.data.items || [];
+      setAnimes(loadedAnimes);
     }
-
-    setIsImporting(true);
-    setImportError(null);
-    setImportResult(null);
-
-    try {
-      const response = await animeService.scanLocalFiles(importPath);
-      
-      if (response.error) {
-        setImportError(response.error);
-      } else if (response.data) {
-        setImportResult(response.data);
-        // Animes neu laden, um die importierten/aktualisierten Animes anzuzeigen
-        const animesResponse = await animeService.getAllAnimes();
-        if (animesResponse.data) {
-          setAnimes(animesResponse.data.items || []);
-        }
-      }
-    } catch (err) {
-      setImportError('Ein unerwarteter Fehler ist aufgetreten.');
-      console.error('Import error:', err);
-    } finally {
-      setIsImporting(false);
-    }
+    
+    setLoading(false);
   };
 
   // Render-Funktion für Listenansicht
@@ -340,70 +317,11 @@ const MyAnimes = () => {
       </Row>
       
       {/* Import Modal */}
-      <Modal show={showImportModal} onHide={() => !isImporting && setShowImportModal(false)}>
-        <Modal.Header closeButton={!isImporting}>
-          <Modal.Title>Lokale Anime-Dateien importieren</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group>
-              <Form.Label>Verzeichnispfad</Form.Label>
-              <Form.Control 
-                type="text" 
-                value={importPath}
-                onChange={(e) => setImportPath(e.target.value)}
-                placeholder="/pfad/zu/anime/dateien"
-                disabled={isImporting}
-              />
-              <Form.Text className="text-muted">
-                Gib den Pfad zum Verzeichnis mit deinen Anime-Dateien ein.
-              </Form.Text>
-            </Form.Group>
-          </Form>
-
-          {importError && (
-            <Alert variant="danger" className="mt-3">
-              {importError}
-            </Alert>
-          )}
-
-          {importResult && (
-            <Alert variant="success" className="mt-3">
-              <p>Import abgeschlossen!</p>
-              <ul>
-                <li>{importResult.total_files} Dateien gescannt</li>
-                <li>{importResult.matched_animes} Animes gefunden</li>
-                <li>{importResult.updated_episodes} Episoden aktualisiert</li>
-              </ul>
-            </Alert>
-          )}
-
-          {isImporting && (
-            <div className="text-center mt-3">
-              <Spinner animation="border" role="status">
-                <span className="visually-hidden">Importiere...</span>
-              </Spinner>
-              <p className="mt-2">Importiere Anime-Dateien...</p>
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button 
-            variant="secondary" 
-            onClick={() => setShowImportModal(false)}
-            disabled={isImporting}
-          >
-            Schließen
-          </Button>
-          <Button 
-            variant="primary" 
-            onClick={handleImportAnimes}
-            disabled={isImporting || !importPath.trim()}
-          >
-            {isImporting ? 'Importiere...' : 'Importieren starten'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <ImportLocalFilesModal
+        show={showImportModal}
+        onHide={() => setShowImportModal(false)}
+        onSuccess={handleImportSuccess}
+      />
       
       {/* Filter-Cards mit Collapse */}
       <Card className="mb-4 filter-card">

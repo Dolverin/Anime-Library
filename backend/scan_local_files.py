@@ -336,58 +336,226 @@ def update_episode_status(db: Session, anime: Anime, episode_number: int, file_p
         db.add(new_episode)
         logger.info(f"Neue Episode {episode_number} für '{anime.titel}' erstellt (Lokal verfügbar)")
 
-def scan_and_update(media_dir: str, db: Session) -> Tuple[int, int, int]:
+def create_anime_from_parsed_data(db: Session, parsed_data: Dict[str, str], file_path: str) -> Optional[Anime]:
+    """
+    Erstellt einen neuen Anime-Eintrag basierend auf lokalen Dateiinformationen.
+    
+    Args:
+        db: Datenbankverbindung
+        parsed_data: Geparste Daten aus dem Dateinamen
+        file_path: Pfad zur Datei
+        
+    Returns:
+        Das erstellte Anime-Objekt oder None bei Fehler
+    """
+    try:
+        # Grundlegende Informationen aus dem Dateinamen extrahieren
+        title = parsed_data.get('title')
+        episode_number = parsed_data.get('episode')
+        
+        if not title or not episode_number:
+            logger.warning(f"Unvollständige Daten für Anime-Erstellung: {parsed_data}")
+            return None
+            
+        # Folder-Pfad ermitteln
+        folder_path = os.path.dirname(file_path)
+        
+        # Anime-Basisverzeichnis ermitteln (ein Verzeichnis höher, wenn es ein Season-Verzeichnis gibt)
+        if 'season' in os.path.basename(folder_path).lower():
+            anime_base_dir = os.path.dirname(folder_path)
+        else:
+            anime_base_dir = folder_path
+            
+        logger.info(f"Erstelle Anime aus lokaler Datei: {title}, Verzeichnis: {anime_base_dir}")
+        
+        # Neuen Anime erstellen
+        anime = Anime(
+            titel_de=title,
+            imported_from_local=True,
+            local_path=anime_base_dir,
+            auto_update=True,
+            status=AnimeStatus.owned,  # Neuer Status für lokale Animes
+            hinzugefuegt_am=datetime.now(),
+            last_scan_time=datetime.now()
+        )
+        
+        db.add(anime)
+        db.flush()  # ID generieren, ohne zu committen
+        
+        logger.info(f"Anime '{title}' mit ID {anime.id} erstellt")
+        
+        # Episode erstellen
+        if episode_number:
+            try:
+                episode_number_int = int(episode_number)
+                
+                # Dateigröße ermitteln, wenn die Datei existiert
+                file_size = None
+                if os.path.exists(file_path):
+                    file_size = os.path.getsize(file_path)
+                
+                # Versuche Auflösung und Codec aus dem Dateinamen zu extrahieren
+                resolution = None
+                codec = None
+                audio_format = None
+                
+                # Einfache Regex-Muster für Metadaten
+                resolution_match = re.search(r'(1080p|720p|480p|2160p|4K)', file_path)
+                if resolution_match:
+                    resolution = resolution_match.group(1)
+                    
+                codec_match = re.search(r'(x264|x265|h264|h265|AVC|HEVC)', file_path)
+                if codec_match:
+                    codec = codec_match.group(1)
+                    
+                audio_match = re.search(r'(AC3|DTS|AAC|FLAC|TrueHD)', file_path)
+                if audio_match:
+                    audio_format = audio_match.group(1)
+                
+                episode = Episode(
+                    anime_id=anime.id,
+                    episoden_nummer=episode_number_int,
+                    local_path=file_path,
+                    file_size=file_size,
+                    resolution=resolution,
+                    codec=codec,
+                    audio_format=audio_format,
+                    status=EpisodeStatus.owned,
+                    availability_status=EpisodeAvailabilityStatus.OWNED_LOCALLY,
+                    hinzugefuegt_am=datetime.now()
+                )
+                
+                db.add(episode)
+                logger.info(f"Episode {episode_number} für Anime '{title}' erstellt")
+                
+            except ValueError:
+                logger.error(f"Episodennummer '{episode_number}' konnte nicht in Integer konvertiert werden")
+        
+        return anime
+        
+    except Exception as e:
+        logger.exception(f"Fehler beim Erstellen des Animes aus lokaler Datei: {str(e)}")
+        return None
+
+def find_matching_anime_by_path(db: Session, path: str) -> Optional[Anime]:
+    """
+    Sucht nach einem Anime mit dem angegebenen lokalen Pfad.
+    
+    Args:
+        db: Datenbankverbindung
+        path: Lokaler Pfad des Animes
+        
+    Returns:
+        Das Anime-Objekt oder None, wenn kein passender Anime gefunden wurde
+    """
+    try:
+        return db.query(Anime).filter(Anime.local_path == path).first()
+    except Exception as e:
+        logger.error(f"Fehler bei der Suche nach Anime mit Pfad '{path}': {str(e)}")
+        return None
+
+def scan_and_update(media_dir: str, db: Session, create_missing: bool = True) -> Tuple[int, int, int]:
     """
     Scannt das Medienverzeichnis und aktualisiert die Datenbank.
     
     Args:
         media_dir: Das zu scannende Verzeichnis
         db: Die Datenbankverbindung
+        create_missing: Wenn True, werden neue Animes erstellt, wenn keine Übereinstimmung gefunden wird
         
     Returns:
-        Tuple mit (gefundene Dateien, gefundene Animes, aktualisierte Episoden)
+        Tuple mit (gefundene Dateien, gefundene/erstellte Animes, aktualisierte Episoden)
     """
-    anime_files = find_anime_files(media_dir)
-    logger.info(f"{len(anime_files)} Anime-Dateien gefunden in {media_dir}")
-    
-    matched_animes = set()
-    updated_episodes = 0
-    unmatched_files = []
-    
-    for file_path in anime_files:
-        parsed_data = parse_filename(file_path)
-        if not parsed_data:
-            unmatched_files.append(file_path)
-            continue
-            
-        title = parsed_data.get('title')
-        episode = parsed_data.get('episode')
+    try:
+        logger.info(f"Starte Scan von Verzeichnis: {media_dir}")
+        anime_files = find_anime_files(media_dir)
+        logger.info(f"{len(anime_files)} Anime-Dateien gefunden in {media_dir}")
         
-        if not title or not episode:
-            unmatched_files.append(file_path)
-            continue
-            
-        anime = find_matching_anime(db, title)
-        if anime:
-            update_episode_status(db, anime, episode, file_path)
-            updated_episodes += 1
-            matched_animes.add(anime.id)
-        else:
-            logger.warning(f"Kein passender Anime für '{title}' gefunden")
-            unmatched_files.append(file_path)
-    
-    # Änderungen speichern
-    db.commit()
-    
-    # Nicht geparste Dateien loggen
-    if unmatched_files:
-        logger.warning(f"{len(unmatched_files)} Dateien konnten nicht geparst oder keinem Anime zugeordnet werden:")
-        for file in unmatched_files[:10]:  # Nur die ersten 10 anzeigen, um die Ausgabe übersichtlich zu halten
-            logger.warning(f"  - {file}")
-        if len(unmatched_files) > 10:
-            logger.warning(f"  ... und {len(unmatched_files) - 10} weitere")
-    
-    return len(anime_files), len(matched_animes), updated_episodes
+        matched_animes = set()
+        created_animes = 0
+        updated_episodes = 0
+        unmatched_files = []
+        
+        for file_path in anime_files:
+            try:
+                parsed_data = parse_filename(file_path)
+                if not parsed_data:
+                    unmatched_files.append(file_path)
+                    continue
+                    
+                title = parsed_data.get('title')
+                episode = parsed_data.get('episode')
+                
+                if not title or not episode:
+                    unmatched_files.append(file_path)
+                    continue
+                    
+                # Versuche zuerst die Datei einem Anime zuzuordnen
+                anime = find_matching_anime(db, title)
+                
+                # Wenn kein Anime gefunden wurde und create_missing aktiviert ist
+                if not anime and create_missing:
+                    # Prüfe, ob wir bereits einen Anime für dieses Verzeichnis erstellt haben
+                    folder_path = os.path.dirname(file_path)
+                    anime_base_dir = folder_path
+                    
+                    # Anime-Basisverzeichnis ermitteln (ein Verzeichnis höher, wenn es ein Season-Verzeichnis gibt)
+                    if 'season' in os.path.basename(folder_path).lower():
+                        anime_base_dir = os.path.dirname(folder_path)
+                    
+                    # Suche nach einem Anime mit diesem Pfad
+                    anime_by_path = find_matching_anime_by_path(db, anime_base_dir)
+                    
+                    if anime_by_path:
+                        # Verwende den existierenden Anime mit diesem Pfad
+                        anime = anime_by_path
+                        logger.info(f"Anime mit Pfad '{anime_base_dir}' gefunden: {anime.titel_de}")
+                    else:
+                        # Erstelle einen neuen Anime
+                        anime = create_anime_from_parsed_data(db, parsed_data, file_path)
+                        if anime:
+                            created_animes += 1
+                            logger.info(f"Neuer Anime '{anime.titel_de}' erstellt aus Datei: {file_path}")
+                
+                if anime:
+                    # Update der Episode
+                    if not any(ep.episoden_nummer == int(episode) and ep.local_path == file_path for ep in anime.episodes):
+                        update_episode_status(db, anime, int(episode), file_path)
+                        updated_episodes += 1
+                    
+                    matched_animes.add(anime.id)
+                else:
+                    logger.warning(f"Kein passender Anime für '{title}' gefunden")
+                    unmatched_files.append(file_path)
+            except Exception as e:
+                logger.error(f"Fehler bei der Verarbeitung von Datei {file_path}: {str(e)}")
+                # Fahre mit nächster Datei fort, anstatt den ganzen Prozess zu beenden
+                continue
+        
+        # Änderungen speichern
+        try:
+            logger.info("Speichere Änderungen in der Datenbank")
+            db.commit()
+        except SQLAlchemyError as e:
+            logger.error(f"Datenbankfehler beim Speichern der Änderungen: {str(e)}")
+            db.rollback()
+            raise
+        
+        # Nicht geparste Dateien loggen
+        if unmatched_files:
+            logger.warning(f"{len(unmatched_files)} Dateien konnten nicht geparst oder keinem Anime zugeordnet werden:")
+            for file in unmatched_files[:10]:  # Nur die ersten 10 anzeigen, um die Ausgabe übersichtlich zu halten
+                logger.warning(f"  - {file}")
+            if len(unmatched_files) > 10:
+                logger.warning(f"  ... und {len(unmatched_files) - 10} weitere")
+        
+        total_animes = len(matched_animes)
+        logger.info(f"Scan abgeschlossen: {len(anime_files)} Dateien gefunden, {total_animes} Animes ({created_animes} neu erstellt), {updated_episodes} Episoden aktualisiert")
+        
+        return len(anime_files), total_animes, updated_episodes
+    except Exception as e:
+        logger.exception(f"Unerwarteter Fehler beim Scannen von {media_dir}: {str(e)}")
+        raise
 
 def main():
     parser = argparse.ArgumentParser(description='Scannt lokale Anime-Dateien und aktualisiert die Datenbank')

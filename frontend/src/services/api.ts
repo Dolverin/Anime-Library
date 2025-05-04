@@ -155,7 +155,20 @@ export const animeService = {
     } catch (error) {
       return handleApiError(error);
     }
-  }
+  },
+
+  // Lokale Anime-Dateien scannen und neue Animes erstellen
+  scanAndCreateAnimes: async (mediaDir: string): Promise<ApiResponse<{total_files: number, matched_animes: number, updated_episodes: number}>> => {
+    try {
+      const response = await api.post<{total_files: number, matched_animes: number, updated_episodes: number}>(
+        '/api/animes/scan-and-create', 
+        { media_dir: mediaDir }
+      );
+      return createApiResponse(response);
+    } catch (error) {
+      return handleApiError(error);
+    }
+  },
 };
 
 export const episodeService = {

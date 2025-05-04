@@ -13,6 +13,8 @@ class AnimeStatus(str, enum.Enum):
     on_hold = "on_hold"
     dropped = "dropped"
     plan_to_watch = "plan_to_watch"
+    owned = "owned"  # Neu: Lokal vorhanden
+    owned_incomplete = "owned_incomplete"  # Neu: Lokal vorhanden, aber unvollständig
 
 class EpisodeStatus(str, enum.Enum):
     missing = "missing"
@@ -35,6 +37,12 @@ class Anime(Base):
     titel_org = Column(String(255))  # Originaltitel (in originaler Schrift)
     titel_en = Column(String(255))  # Englischer Titel
     synonyme = Column(String(500))  # Sonstige alternative Titel
+    
+    # Neue Felder für lokale Dateien und automatisches Update
+    imported_from_local = Column(Boolean, default=False)  # Ob der Anime von lokalen Dateien importiert wurde
+    local_path = Column(String(500), nullable=True)  # Pfad zum lokalen Verzeichnis des Animes
+    auto_update = Column(Boolean, default=True)  # Ob der Anime automatisch aktualisiert werden soll
+    last_scan_time = Column(DateTime, nullable=True)  # Zeitpunkt des letzten Scans
     
     beschreibung = Column(Text)
     status = Column(Enum(AnimeStatus), default=AnimeStatus.plan_to_watch)
@@ -91,6 +99,14 @@ class Episode(Base):
     status = Column(Enum(EpisodeStatus), nullable=False, default=EpisodeStatus.missing)
     availability_status = Column(Enum(EpisodeAvailabilityStatus), nullable=False, default=EpisodeAvailabilityStatus.NOT_AVAILABLE)
     local_path = Column(String(512), nullable=True)  # Pfad zur lokalen Datei
+    
+    # Neue Felder für lokale Dateien
+    file_size = Column(Integer, nullable=True)  # Größe der Datei in Bytes
+    file_hash = Column(String(64), nullable=True)  # Hash der Datei (für Deduplizierung)
+    resolution = Column(String(20), nullable=True)  # z.B. "1080p"
+    codec = Column(String(20), nullable=True)  # z.B. "x265"
+    audio_format = Column(String(20), nullable=True)  # z.B. "DTS"
+    
     air_date = Column(Date, nullable=True)
     anime_loads_episode_url = Column(String(512), nullable=True)
     hinzugefuegt_am = Column(TIMESTAMP, server_default=func.now())
