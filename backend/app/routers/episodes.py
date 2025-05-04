@@ -53,7 +53,7 @@ def read_episode(anime_id: int, episode_id: int, db: Session = Depends(get_db)):
     
     return db_episode
 
-@router.put("/{episode_id}", response_model=schemas.Episode)
+@router.put("/update/{episode_id}", response_model=schemas.Episode)
 def update_episode(episode_id: int, episode: schemas.EpisodeUpdate, db: Session = Depends(get_db)):
     """Aktualisiere eine Episode anhand ihrer ID."""
     db_episode = crud.get_episode(db, episode_id=episode_id)
@@ -63,7 +63,7 @@ def update_episode(episode_id: int, episode: schemas.EpisodeUpdate, db: Session 
     updated_episode = crud.update_episode(db, episode_id=episode_id, episode_update=episode)
     return updated_episode
 
-@router.delete("/{episode_id}", response_model=schemas.Episode)
+@router.delete("/delete/{episode_id}", response_model=schemas.Episode)
 def delete_episode(episode_id: int, db: Session = Depends(get_db)):
     """Lösche eine Episode anhand ihrer ID."""
     db_episode = crud.get_episode(db, episode_id=episode_id)
