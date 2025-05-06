@@ -35,8 +35,8 @@ app.add_middleware(
         "http://192.168.178.40:5175"   # Netzwerk-URL mit neuem Port
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
 )
 
 # Include the anime router
@@ -148,3 +148,7 @@ def get_cover(anime_id: int, db=Depends(get_db)):
         db.commit()
 
     return FileResponse(local_path, media_type="image/png")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
