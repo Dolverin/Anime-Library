@@ -212,16 +212,25 @@ def scan_local_anime_files(media_dir: str = Body(...), db: Session = Depends(get
         raise HTTPException(status_code=500, detail=f"Fehler beim Scannen: {str(e)}")
 
 @router.post("/scan-and-create", response_model=Dict[str, int])
-def scan_and_create_animes(media_dir: str = Body(...), db: Session = Depends(get_db)):
+def scan_and_create_animes(media_dir_obj: Dict[str, str] = Body(...), db: Session = Depends(get_db)):
     """
     Scannt das angegebene Verzeichnis und erstellt neue Anime-Einträge für nicht zugeordnete Dateien.
     
     Args:
-        media_dir: Das zu scannende Verzeichnis
+        media_dir_obj: Dictionary mit dem Schlüssel 'media_dir' und dem Pfad als Wert
         
     Returns:
         Dictionary mit Statistiken (gefundene Dateien, erstellte Animes, aktualisierte Episoden)
     """
+    # Erhöhte Sichtbarkeit des vollständigen Request-Körpers
+    logger.info(f"Empfangener Request-Body: {media_dir_obj}")
+    
+    # Extrahiere media_dir aus dem Dictionary
+    if not isinstance(media_dir_obj, dict) or 'media_dir' not in media_dir_obj:
+        logger.error(f"Fehlerhafter Request-Body: {media_dir_obj}")
+        raise HTTPException(status_code=422, detail="'media_dir' wird im Request-Body erwartet")
+    
+    media_dir = media_dir_obj['media_dir']
     logger.info(f"Scan-and-Create-Anfrage für Verzeichnis: {media_dir}")
     
     # Prüfen, ob das Verzeichnis existiert
@@ -240,17 +249,38 @@ def scan_and_create_animes(media_dir: str = Body(...), db: Session = Depends(get
     
     try:
         # Aufruf der erweiterten Funktion mit create_missing=True
-        total_files, matched_animes, updated_episodes = scan_and_update(
-            media_dir, db, create_missing=True
-        )
+        logger.info(f"Führe scan_and_update mit create_missing=True für Verzeichnis aus: {media_dir}")
         
-        logger.info(f"Scan-and-Create abgeschlossen: {total_files} Dateien, {matched_animes} Animes, {updated_episodes} Episoden")
-        
-        return {
-            "total_files": total_files,
-            "matched_animes": matched_animes, 
-            "updated_episodes": updated_episodes
-        }
+        # Detailliertes Debugging
+        import traceback
+        try:
+            # Einfacher Test, ob wir überhaupt auf die Datenbank zugreifen können
+            try:
+                test_animes = db.query(models.Anime).limit(1).all()
+                logger.info(f"Datenbankzugriff erfolgreich, gefundene Animes: {len(test_animes)}")
+            except Exception as db_e:
+                logger.error(f"Datenbankzugriff fehlgeschlagen: {str(db_e)}")
+                raise HTTPException(status_code=500, detail=f"Datenbankzugriff fehlgeschlagen: {str(db_e)}")
+                
+            total_files, matched_animes, updated_episodes = scan_and_update(
+                media_dir, db, create_missing=True
+            )
+            
+            logger.info(f"Scan-and-Create abgeschlossen: {total_files} Dateien, {matched_animes} Animes, {updated_episodes} Episoden")
+            
+            # Zusätzliche Überprüfung, ob wir die Daten tatsächlich zurückgeben können
+            result = {
+                "total_files": total_files,
+                "matched_animes": matched_animes, 
+                "updated_episodes": updated_episodes
+            }
+            logger.info(f"Rückgabewerte: {result}")
+            return result
+            
+        except Exception as inner_e:
+            logger.error(f"Details der Exception: {str(inner_e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise inner_e
     except Exception as e:
         logger.exception(f"Fehler beim Scan-and-Create für {media_dir}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Fehler beim Scannen: {str(e)}")

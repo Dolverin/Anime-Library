@@ -30,10 +30,15 @@ const ImportLocalFilesModal: React.FC<ImportLocalFilesModalProps> = ({ show, onH
     setImportResult(null);
 
     try {
+      console.log('Import-Anfrage wird gesendet für:', importPath);
+      console.log('CreateNew Flag ist:', createNew);
+      
       // Je nach Einstellung entweder normale Scan-Funktion oder Scan-and-Create verwenden
       const response = createNew 
         ? await animeService.scanAndCreateAnimes(importPath)
         : await animeService.scanLocalFiles(importPath);
+      
+      console.log('Vollständige API-Antwort:', response);
       
       if (response.error) {
         const errorMessage = typeof response.error === 'string' 
@@ -42,6 +47,7 @@ const ImportLocalFilesModal: React.FC<ImportLocalFilesModalProps> = ({ show, onH
         console.error('Import error details:', errorMessage);
         setImportError(errorMessage);
       } else if (response.data) {
+        console.log('Import erfolgreich, Ergebnis:', response.data);
         setImportResult(response.data);
         
         // Erfolgreiche Importbenachrichtigung
